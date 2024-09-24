@@ -1,0 +1,15 @@
+.DS_Store
+__pycache__
+*.pyc
+venv/
+*.ini
+*.conf
+*.yaml
+*.yml
+.tmp/
+.cache/
+*.log
+logs/
+*.swp
+*~
+.git
