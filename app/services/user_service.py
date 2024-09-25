@@ -1,15 +1,19 @@
-from app.models.model import User
-from app.schemas.schema import UserCreate, UserResponse
+from app.models.model import User, Transaction
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.schemas.schema import UserCreate, UserResponse, UserTransactionsResponse
 from sqlalchemy import select
+
+from app.utils.crud_repository import CrudRepository
+from app.utils.utils import replace_date_format
 
 
 class UserService:
-    def __init__(self, session):
+    def __init__(self, session: AsyncSession):
         self.session = session
 
 
     async def is_user_exists(self, user: UserCreate) -> bool:
-        """ Check if the user exists in the database """
+        """ check if the user exists in the database """
         stmt = select(User).filter(User.username == user.username)
         result = await self.session.execute(stmt)
         exists = result.scalars().first()
@@ -19,13 +23,27 @@ class UserService:
 
 
     async def add_user(self, username: str) -> UserResponse:
-        """ Add a new user to the database """
+        """ add a new user to the database """
         new_user = User(username=username)
         self.session.add(new_user)
         await self.session.commit()
         await self.session.refresh(new_user)
         return UserResponse.model_validate(new_user)
 
+
+    async def get_user(self, user_id: int) -> UserTransactionsResponse:
+        """method gets all transactions for a specific user based on their user ID."""
+        user_crud_repository = CrudRepository(self.session, User)
+        current_user = await user_crud_repository.get_one_by(id=user_id)
+        transaction_crud_repository = CrudRepository(self.session, Transaction)
+        transactions = await transaction_crud_repository.get_all_by(user_id=user_id)
+
+        transactions_data = await replace_date_format(transactions)
+        return UserTransactionsResponse(
+            user_id = current_user.id,
+            username=current_user.username,
+            transactions=transactions_data
+        )
 
 
 
