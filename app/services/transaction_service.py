@@ -12,12 +12,12 @@ class TransactionService:
 
 
     async def create_transaction(self, transaction: TransactionCreate) -> TransactionResponse | bool:
-        """method creates a new transaction in the database. The identical transaction user can create only  after 1 minute."""
+        """method creates a new transaction in the database, the identical transaction user can create only after 1 minute"""
         crud_repository = CrudRepository(self.session, Transaction)
         transac_dict = transaction.model_dump(exclude_unset=True)
 
         one_minute = datetime.now() - timedelta(minutes=1)
-        # Create filter conditions to find a similar transaction
+        # find the identical transaction within 1 minute
         stmt = select(Transaction).where(
             Transaction.user_id == transac_dict['user_id'],
             Transaction.transaction_type == transac_dict['transaction_type'],
@@ -31,14 +31,14 @@ class TransactionService:
 
         new_transaction = await crud_repository.create_one(transac_dict)
         formatted_date = new_transaction.get_transaction_date_in_local().strftime('%d.%m.%Y, %H:%M')
-        transaction_response = TransactionResponse(
-            id=new_transaction.id,
-            user_id=new_transaction.user_id,
-            transaction_type=new_transaction.transaction_type,
-            amount=new_transaction.amount,
-            transaction_date=formatted_date
-        )
-        return transaction_response
+        data = {
+            "id": new_transaction.id,
+            "user_id": new_transaction.user_id,
+            "transaction_type": new_transaction.transaction_type,
+            "amount": new_transaction.amount,
+            "transaction_date": formatted_date
+        }
+        return TransactionResponse.model_validate(data)
 
 
 

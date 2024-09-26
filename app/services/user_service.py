@@ -2,7 +2,6 @@ from app.models.model import User, Transaction
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.schema import UserCreate, UserResponse, UserTransactionsResponse
 from sqlalchemy import select
-
 from app.utils.crud_repository import CrudRepository
 from app.utils.utils import replace_date_format
 
@@ -32,18 +31,19 @@ class UserService:
 
 
     async def get_user(self, user_id: int) -> UserTransactionsResponse:
-        """method gets all transactions for a specific user based on their user ID."""
+        """method gets all transactions for a specific user by id"""
         user_crud_repository = CrudRepository(self.session, User)
         current_user = await user_crud_repository.get_one_by(id=user_id)
         transaction_crud_repository = CrudRepository(self.session, Transaction)
         transactions = await transaction_crud_repository.get_all_by(user_id=user_id)
 
-        transactions_data = await replace_date_format(transactions)
-        return UserTransactionsResponse(
-            user_id = current_user.id,
-            username=current_user.username,
-            transactions=transactions_data
-        )
+        transactions = await replace_date_format(transactions)
+        data = {
+            'user_id': current_user.id,
+            'username': current_user.username,
+            'transactions': transactions
+         }
+        return UserTransactionsResponse.model_validate(data)
 
 
 
