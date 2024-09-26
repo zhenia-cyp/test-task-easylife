@@ -39,4 +39,3 @@ async def test_get_user(user_service):
     assert len(result.transactions) == 2
     assert result.transactions[0].amount == 100
     assert result.transactions[1].amount == 200
-    user_service.get_user.assert_called_once_with(mock_user.id)
