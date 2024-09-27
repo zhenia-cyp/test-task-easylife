@@ -1,8 +1,13 @@
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.models.model import User, Transaction
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas.schema import UserCreate, UserResponse, UserTransactionsResponse
+from app.schemas.pagination import PageParams, PaginationResponse
+from app.schemas.schema import UserCreate, UserResponse, UserTransactionsResponse, TransactionResponse
 from sqlalchemy import select
 from app.utils.crud_repository import CrudRepository
+from app.utils.exeption import NotFoundException
+from app.utils.pagination import Pagination
 from app.utils.utils import replace_date_format
 
 
@@ -30,20 +35,24 @@ class UserService:
         return UserResponse.model_validate(new_user)
 
 
-    async def get_user(self, user_id: int) -> UserTransactionsResponse:
+    async def get_user(self, user_id: int, page_params: PageParams) -> PaginationResponse[TransactionResponse] | None:
         """method gets all transactions for a specific user by id"""
         user_crud_repository = CrudRepository(self.session, User)
         current_user = await user_crud_repository.get_one_by(id=user_id)
+        if current_user is None:
+            return None
         transaction_crud_repository = CrudRepository(self.session, Transaction)
         transactions = await transaction_crud_repository.get_all_by(user_id=user_id)
-
         transactions = await replace_date_format(transactions)
-        data = {
-            'user_id': current_user.id,
-            'username': current_user.username,
-            'transactions': transactions
-         }
-        return UserTransactionsResponse.model_validate(data)
+        transaction_response = [TransactionResponse.model_validate(t) for t in transactions]
+
+        pagination = Pagination(Transaction, self.session, page_params, items=transaction_response)
+        paginated_transactions = await pagination.get_pagination()
+        paginated_transactions.user_id = current_user.id
+        paginated_transactions.username = current_user.username
+        return paginated_transactions
+
+
 
 
 

@@ -36,6 +36,7 @@ class UserTransactionsResponse(BaseModel):
     username: str
     transactions: List[TransactionResponse]
 
+
     model_config = ConfigDict(from_attributes=True)
 
 

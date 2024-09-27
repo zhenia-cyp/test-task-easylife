@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock
-from datetime import datetime, timedelta
+from datetime import datetime
 from app.schemas.schema import TransactionCreate, TransactionResponse
 from app.models.model import Transaction
 

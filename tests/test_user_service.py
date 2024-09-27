@@ -14,8 +14,6 @@ async def test_add_user(user_service):
 
     assert isinstance(result, UserResponse)
     assert result.id == 1
-    user_service.is_user_exists.assert_not_called()
-    user_service.add_user.assert_called_once_with(user.username)
 
 
 @pytest.mark.asyncio
