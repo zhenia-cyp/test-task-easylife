@@ -33,3 +33,10 @@ class CrudRepository:
             return new_data
 
 
+    async def get_all(self):
+            stmt = select(self.model)
+            result = await self.session.execute(stmt)
+            result = result.scalars().all()
+            return result
+
+

@@ -7,17 +7,17 @@ T = TypeVar('T')
 
 
 class Pagination:
-    def __init__(self, model, session, page_params: PageParams, items: Optional[List[T]]):
-        self.model = model
-        self.session = session
+    def __init__(self, page_params: PageParams, items: Optional[List[T]], schema):
+
         self.page_params = page_params
         self.items = items
         self.page = page_params.page - 1
         self.offset = self.page * page_params.size
         self.limit = page_params.size
+        self.schema = schema
 
 
-    async def get_pagination(self) -> PaginationResponse:
+    async def get_pagination(self):
         items = self.items[self.offset:self.offset + self.limit]
         if not items:
             data = {
@@ -37,4 +37,4 @@ class Pagination:
             "total_pages": self.total_pages,
             "total_items": total_items
         }
-        return PaginationResponse.model_validate(data)
+        return self.schema.model_validate(data)

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_async_session
-from app.schemas.pagination import PageParams, PaginationResponse
+from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
 from app.schemas.schema import UserResponse, UserCreate, TransactionResponse
 from app.services.user_service import UserService
 from fastapi import HTTPException
@@ -27,6 +27,13 @@ async def get_user(user_id: int, session: AsyncSession = Depends(get_async_sessi
     if transactions is None:
         raise HTTPException(status_code=404, detail="User not found")
     return transactions
+
+
+@router_user.get("/get/all/users/", response_model=PaginationListResponse)
+async def get_user(session: AsyncSession = Depends(get_async_session), page_params: PageParams = Depends(PageParams)):
+    user_service = UserService(session)
+    users = await user_service.get_all_users(page_params)
+    return users
 
 
 

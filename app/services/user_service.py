@@ -1,12 +1,9 @@
-from sqlalchemy.exc import SQLAlchemyError
-
 from app.models.model import User, Transaction
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas.pagination import PageParams, PaginationResponse
+from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
 from app.schemas.schema import UserCreate, UserResponse, UserTransactionsResponse, TransactionResponse
 from sqlalchemy import select
 from app.utils.crud_repository import CrudRepository
-from app.utils.exeption import NotFoundException
 from app.utils.pagination import Pagination
 from app.utils.utils import replace_date_format
 
@@ -44,16 +41,42 @@ class UserService:
         transaction_crud_repository = CrudRepository(self.session, Transaction)
         transactions = await transaction_crud_repository.get_all_by(user_id=user_id)
         transactions = await replace_date_format(transactions)
-        transaction_response = [TransactionResponse.model_validate(t) for t in transactions]
+        transaction_response = [TransactionResponse.model_validate(transaction) for transaction in transactions]
 
-        pagination = Pagination(Transaction, self.session, page_params, items=transaction_response)
+        pagination = Pagination(page_params, items=transaction_response, schema=PaginationResponse)
         paginated_transactions = await pagination.get_pagination()
         paginated_transactions.user_id = current_user.id
         paginated_transactions.username = current_user.username
         return paginated_transactions
 
 
-
+    async def get_all_users(self, page_params: PageParams) -> PaginationListResponse:
+        data = []
+        result = await self.session.execute(
+            select(User, Transaction)
+            .join(Transaction, Transaction.user_id == User.id)
+        )
+        rows = result.fetchall()
+        for user, transaction in rows:
+            existing_user = next((item for item in data if item["user_id"] == user.id), None)
+            if not existing_user:
+                existing_user = {
+                    "user_id": user.id,
+                    "username": user.username,
+                    "transactions": []
+                }
+                data.append(existing_user)
+            transaction = await replace_date_format(transaction)
+            existing_user["transactions"].append({
+                "id": transaction.id,
+                "transaction_type": transaction.transaction_type,
+                "amount": transaction.amount,
+                "transaction_date": transaction.transaction_date
+            })
+        user_transactions_response = [UserTransactionsResponse.model_validate(item) for item in data]
+        pagination = Pagination(page_params, items=user_transactions_response, schema=PaginationListResponse)
+        users = await pagination.get_pagination()
+        return users
 
 
 

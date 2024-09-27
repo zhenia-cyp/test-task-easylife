@@ -18,3 +18,13 @@ class PaginationResponse(BaseModel, Generic[T]):
     total_items:int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaginationListResponse(BaseModel, Generic[T]):
+    result: List[T]
+    current_page: int
+    size: int
+    total_pages: int
+    total_items:int
+
+    model_config = ConfigDict(from_attributes=True)
