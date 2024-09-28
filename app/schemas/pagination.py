@@ -12,19 +12,20 @@ class PaginationResponse(BaseModel, Generic[T]):
     user_id: Optional[int] = None
     username: Optional[str] = None
     result: List[T]
+    total_items: int
     current_page: int
     size: int
     total_pages: int
-    total_items:int
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class PaginationListResponse(BaseModel, Generic[T]):
     result: List[T]
+    total_items: int
     current_page: int
     size: int
     total_pages: int
-    total_items:int
+
 
     model_config = ConfigDict(from_attributes=True)

@@ -24,7 +24,7 @@ class UserService:
 
 
     async def add_user(self, username: str) -> UserResponse:
-        """ add a new user to the database """
+        """ this method returns a new user  """
         new_user = User(username=username)
         self.session.add(new_user)
         await self.session.commit()
@@ -33,7 +33,7 @@ class UserService:
 
 
     async def get_user(self, user_id: int, page_params: PageParams) -> PaginationResponse[TransactionResponse] | None:
-        """method gets all transactions for a specific user by id"""
+        """the method returns all transactions for a specific user by id"""
         user_crud_repository = CrudRepository(self.session, User)
         current_user = await user_crud_repository.get_one_by(id=user_id)
         if current_user is None:
@@ -41,16 +41,16 @@ class UserService:
         transaction_crud_repository = CrudRepository(self.session, Transaction)
         transactions = await transaction_crud_repository.get_all_by(user_id=user_id)
         transactions = await replace_date_format(transactions)
-        transaction_response = [TransactionResponse.model_validate(transaction) for transaction in transactions]
 
-        pagination = Pagination(page_params, items=transaction_response, schema=PaginationResponse)
-        paginated_transactions = await pagination.get_pagination()
-        paginated_transactions.user_id = current_user.id
-        paginated_transactions.username = current_user.username
-        return paginated_transactions
+        pagination = Pagination(page_params, items=transactions, schema=PaginationResponse)
+        transactions = await pagination.get_pagination()
+        transactions.user_id = current_user.id
+        transactions.username = current_user.username
+        return PaginationResponse.model_validate(transactions)
 
 
     async def get_all_users(self, page_params: PageParams) -> PaginationListResponse:
+        """this method returns all users and their transactions"""
         data = []
         result = await self.session.execute(
             select(User, Transaction)
@@ -76,7 +76,7 @@ class UserService:
         user_transactions_response = [UserTransactionsResponse.model_validate(item) for item in data]
         pagination = Pagination(page_params, items=user_transactions_response, schema=PaginationListResponse)
         users = await pagination.get_pagination()
-        return users
+        return PaginationListResponse.model_validate(users)
 
 
 

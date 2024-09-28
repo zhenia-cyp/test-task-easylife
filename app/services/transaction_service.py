@@ -12,7 +12,7 @@ class TransactionService:
 
 
     async def create_transaction(self, transaction: TransactionCreate) -> TransactionResponse | bool:
-        """method creates a new transaction in the database, the identical transaction user can create only after 1 minute"""
+        """this method returns a new transaction in the database, the identical transaction user can create only after 1 minute"""
         crud_repository = CrudRepository(self.session, Transaction)
         transac_dict = transaction.model_dump(exclude_unset=True)
 
