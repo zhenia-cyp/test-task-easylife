@@ -1,7 +1,7 @@
 from app.models.model import User, Transaction
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
-from app.schemas.schema import UserCreate, UserResponse, UserTransactionsResponse, TransactionResponse
+from app.schemas.schema import UserCreate, UserResponse, TransactionResponse
 from sqlalchemy import select
 from app.utils.crud_repository import CrudRepository
 from app.utils.pagination import Pagination
@@ -15,20 +15,18 @@ class UserService:
 
     async def is_user_exists(self, user: UserCreate) -> bool:
         """ check if the user exists in the database """
-        stmt = select(User).filter(User.username == user.username)
-        result = await self.session.execute(stmt)
-        exists = result.scalars().first()
-        if exists:
+        crud_repository = CrudRepository(self.session, User)
+        user = await crud_repository.get_one_by(username=user.username)
+        if user:
             return True
         return False
 
 
-    async def add_user(self, username: str) -> UserResponse:
+    async def add_user(self, user: UserCreate) -> UserResponse:
         """ this method returns a new user  """
-        new_user = User(username=username)
-        self.session.add(new_user)
-        await self.session.commit()
-        await self.session.refresh(new_user)
+        user_dict = user.model_dump(exclude_unset=True)
+        crud_repository = CrudRepository(self.session, User)
+        new_user = await crud_repository.create_one(user_dict)
         return UserResponse.model_validate(new_user)
 
 
@@ -73,8 +71,7 @@ class UserService:
                 "amount": transaction.amount,
                 "transaction_date": transaction.transaction_date
             })
-        user_transactions_response = [UserTransactionsResponse.model_validate(item) for item in data]
-        pagination = Pagination(page_params, items=user_transactions_response, schema=PaginationListResponse)
+        pagination = Pagination(page_params, items=data, schema=PaginationListResponse)
         users = await pagination.get_pagination()
         return PaginationListResponse.model_validate(users)
 

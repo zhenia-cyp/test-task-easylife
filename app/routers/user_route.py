@@ -16,7 +16,7 @@ async def add_user(user: UserCreate, session: AsyncSession = Depends(get_async_s
     exists = await user_service.is_user_exists(user)
     if exists:
         raise HTTPException(status_code=400, detail="Username already registered")
-    user_id = await user_service.add_user(user.username)
+    user_id = await user_service.add_user(user)
     return user_id
 
 

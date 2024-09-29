@@ -38,6 +38,7 @@ class Transaction(Base):
     amount = Column(Float, nullable=False, default=0.0)
     transaction_date = Column(DateTime(timezone=True), server_default=func.now())
 
+
     @validates('amount')
     def validate_amount(self, key, value):
         if value == 0.0:
@@ -46,9 +47,10 @@ class Transaction(Base):
             raise ValueError("Transaction amount cannot be negative.")
         return value
 
-    def get_transaction_date_in_local(self):
-        local_timezone = timezone('Europe/Kyiv')
-        self.transaction_date  = self.transaction_date.astimezone(local_timezone)
+
+    def get_transaction_date_in_local(self, local_tz='Europe/Kyiv'):
+        local_timezone = timezone(local_tz)
+        self.transaction_date = self.transaction_date.astimezone(local_timezone)
         return self.transaction_date
 
 

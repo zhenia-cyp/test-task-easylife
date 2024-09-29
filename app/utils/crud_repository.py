@@ -22,7 +22,7 @@ class CrudRepository:
             result = result.scalars().first()
             return result
         except SQLAlchemyError as e:
-            return False
+            return None
 
 
     async def create_one(self, data: dict):
