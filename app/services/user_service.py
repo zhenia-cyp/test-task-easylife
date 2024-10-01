@@ -1,7 +1,7 @@
-from app.models.model import User, Transaction
+from app.models.model import User, Transaction, Referral
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
-from app.schemas.schema import UserCreate, UserResponse, TransactionResponse
+from app.schemas.schema import UserCreate, UserResponse, TransactionResponse, ReferralCreate, ReferralResponse
 from sqlalchemy import select
 from app.utils.crud_repository import CrudRepository
 from app.utils.pagination import Pagination
@@ -74,6 +74,30 @@ class UserService:
         pagination = Pagination(page_params, items=data, schema=PaginationListResponse)
         users = await pagination.get_pagination()
         return PaginationListResponse.model_validate(users)
+
+
+    async def create_referral_by_code(self, code: str, referal: UserCreate ) -> ReferralResponse:
+        """this method returns a referral by a referral code"""
+        referal_crud_repository = CrudRepository(self.session, Referral)
+        user_crud_repository = CrudRepository(self.session, User)
+        user_referer = await user_crud_repository.get_one_by(referral_code=code)
+        print('user_referer:', user_referer)
+        if not user_referer:
+            return None
+
+        existing_user = await user_crud_repository.get_one_by(username=referal.username)
+        if existing_user:
+            has_referer = await referal_crud_repository.get_one_by(referred_id=existing_user.id)
+            if has_referer:
+                return 'has_referer'
+            new_referal = await referal_crud_repository.create_one({"referrer_id": user_referer.id, "referred_id": existing_user.id})
+            return new_referal
+        new_user = await self.add_user(referal)
+        new_referal = await referal_crud_repository.create_one(
+            {"referrer_id": user_referer.id, "referred_id": new_user.id})
+        return new_referal
+
+
 
 
 

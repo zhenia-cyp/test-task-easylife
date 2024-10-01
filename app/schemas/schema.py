@@ -3,6 +3,12 @@ from pydantic import BaseModel, ConfigDict
 from decimal import Decimal
 
 
+class ReferralCreate(BaseModel):
+    referral_code: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserCreate(BaseModel):
     username: str
 
@@ -36,11 +42,10 @@ class UserTransactionsResponse(BaseModel):
     username: str
     transactions: List[TransactionResponse]
 
-
     model_config = ConfigDict(from_attributes=True)
 
 
-class ReferralCreate(BaseModel):
+class ReferralResponse(BaseModel):
     referrer_id: int
     referred_id: int
 

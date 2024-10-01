@@ -14,7 +14,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
-    username = Column(String, unique=True)
+    username = Column(String)
     referral_code = Column(String, unique=True, nullable=False, default=lambda: str(uuid.uuid4())[:10])
     created_at = Column(DateTime, default=datetime.datetime.now())
 
