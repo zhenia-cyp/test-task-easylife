@@ -1,7 +1,10 @@
+from sqlalchemy.sql.functions import current_user
+
 from app.models.model import User, Transaction, Referral
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
-from app.schemas.schema import UserCreate, UserResponse, TransactionResponse, ReferralCreate, ReferralResponse
+from app.schemas.schema import UserCreate, UserResponse, TransactionResponse, ReferralCreate, ReferralResponse, \
+    GetAllReferralsResponse
 from sqlalchemy import select
 from app.utils.crud_repository import CrudRepository
 from app.utils.pagination import Pagination
@@ -76,7 +79,7 @@ class UserService:
         return PaginationListResponse.model_validate(users)
 
 
-    async def create_referral_by_code(self, code: str, referal: UserCreate ) -> ReferralResponse:
+    async def create_referral_by_code(self, code: str, referral: UserCreate ) -> ReferralResponse | None| str:
         """this method returns a referral by a referral code"""
         referal_crud_repository = CrudRepository(self.session, Referral)
         user_crud_repository = CrudRepository(self.session, User)
@@ -85,19 +88,41 @@ class UserService:
         if not user_referer:
             return None
 
-        existing_user = await user_crud_repository.get_one_by(username=referal.username)
+        existing_user = await user_crud_repository.get_one_by(username=referral.username)
         if existing_user:
             has_referer = await referal_crud_repository.get_one_by(referred_id=existing_user.id)
             if has_referer:
                 return 'has_referer'
             new_referal = await referal_crud_repository.create_one({"referrer_id": user_referer.id, "referred_id": existing_user.id})
             return new_referal
-        new_user = await self.add_user(referal)
+        new_user = await self.add_user(referral)
         new_referal = await referal_crud_repository.create_one(
             {"referrer_id": user_referer.id, "referred_id": new_user.id})
         return new_referal
 
 
+    async def get_my_referrals(self, user_id: int) -> GetAllReferralsResponse | None:
+        """method returns the current user's information with a list of their referred users"""
+        user_crud_repository = CrudRepository(self.session, User)
+        current_user = await user_crud_repository.get_one_by(id=user_id)
+        if not current_user:
+            return None
+        data = {"user_id": current_user.id,
+                "username": current_user.username,
+                "referrals": []
+                }
+        referrals = await self.session.execute(
+            select(Referral, User)
+            .join(User, Referral.referred_id == User.id)
+            .filter(Referral.referrer_id == user_id)
+        )
+        for referral, referred_user in referrals:
+            data["referrals"].append({
+                "user_id": referred_user.id,
+                "username": referred_user.username
+            })
+
+        return GetAllReferralsResponse.model_validate(data)
 
 
 

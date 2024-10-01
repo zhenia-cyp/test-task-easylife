@@ -19,6 +19,13 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UsernameResponse(BaseModel):
+    user_id: int
+    username: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TransactionCreate(BaseModel):
     user_id: int
     transaction_type: str
@@ -49,5 +56,11 @@ class ReferralResponse(BaseModel):
     referrer_id: int
     referred_id: int
 
+    model_config = ConfigDict(from_attributes=True)
 
+
+class GetAllReferralsResponse(BaseModel):
+    user_id: int
+    username: str
+    referrals: List[UsernameResponse]
 

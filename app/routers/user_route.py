@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_async_session
-
+from app.models.model import User
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
-from app.schemas.schema import UserResponse, UserCreate, TransactionResponse, ReferralCreate, ReferralResponse
+from app.schemas.schema import UserResponse, UserCreate, TransactionResponse, ReferralCreate, ReferralResponse, \
+    GetAllReferralsResponse
 from app.services.user_service import UserService
 from fastapi import HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from app.utils.crud_repository import CrudRepository
 
 
 router_user = APIRouter()
@@ -23,7 +25,7 @@ async def add_user(user: UserCreate, session: AsyncSession = Depends(get_async_s
     return user_id
 
 
-@router_user.get("/get/user/", response_model=PaginationResponse[TransactionResponse])
+@router_user.get("/get/user/{user_id}/", response_model=PaginationResponse[TransactionResponse])
 async def get_user(user_id: int, session: AsyncSession = Depends(get_async_session), page_params: PageParams = Depends(PageParams)):
     user_service = UserService(session)
     transactions = await user_service.get_user(user_id, page_params)
@@ -55,4 +57,13 @@ async def create_referal(code: str, referal: UserCreate, session: AsyncSession =
     if user == 'has_referer':
         raise HTTPException(status_code=404, detail="User already has referer")
     return user
+
+
+@router_user.get("/get/all/referrals/{user_id}", response_model=GetAllReferralsResponse)
+async def get_referrals(user_id: int, session: AsyncSession = Depends(get_async_session)):
+    user_service = UserService(session)
+    referrals = await user_service.get_my_referrals(user_id)
+    if not referrals:
+        raise HTTPException(status_code=404, detail="User not found")
+    return referrals
 
