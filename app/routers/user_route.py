@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_async_session
+
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
 from app.schemas.schema import UserResponse, UserCreate, TransactionResponse
 from app.services.user_service import UserService
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 
 
 router_user = APIRouter()
@@ -36,4 +39,9 @@ async def get_user(session: AsyncSession = Depends(get_async_session), page_para
     return users
 
 
+@router_user.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    from app.main import templates
+    context = {"request": request, "name": "John"}
+    return templates.TemplateResponse("index.html", context)
 

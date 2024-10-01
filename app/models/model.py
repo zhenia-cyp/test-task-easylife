@@ -3,6 +3,7 @@ from sqlalchemy.orm import declarative_base
 import datetime
 from sqlalchemy.orm import validates
 from pytz import timezone
+import uuid
 
 
 Base = declarative_base()
@@ -13,19 +14,22 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
-    username = Column(String)
+    username = Column(String, unique=True)
+    referral_code = Column(String, unique=True, nullable=False, default=lambda: str(uuid.uuid4())[:10])
     created_at = Column(DateTime, default=datetime.datetime.now())
 
     def __str__(self):
         return(
             f"User: id: {self.id}," 
             f"username: {self.username},"
+            f"referral_code: {self.referral_code},"
         )
 
     def __repr__(self):
         return (
             f"User: id: {self.id},"
             f"username: {self.username},"
+            f"referral_code: {self.referral_code}"
 
         )
 
