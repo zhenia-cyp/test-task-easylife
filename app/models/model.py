@@ -69,13 +69,8 @@ class Transaction(Base):
 
 
     def __repr__(self):
-        return (
-            f"Transaction: id: {self.id},"
-            f"user_id: {self.user_id},"
-            f"transaction_type: {self.transaction_type},"
-            f"amount: {self.amount},"
-            f"transaction_date: {self.transaction_date}"
-        )
+        return f"Transaction: id: {self.id}, user_id: {self.user_id}, transaction_type: {self.transaction_type}, amount: {self.amount}, transaction_date: {self.transaction_date}"
+
 
 
 class Referral(Base):
@@ -85,17 +80,12 @@ class Referral(Base):
     referred_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     def __str__(self):
-        return(
-                f"Referral: id: {self.id}",
-                f"referrer_id: {self.referrer_id}," 
-                f"referred_id: {self.referred_id}"
-        )
+
+        return f"<Referral(referrer_id={self.referrer_id}, referred_id={self.referred_id})>"
+
 
     def __repr__(self):
-        return(
-            f"Referral: id: {self.id},"
-            f"referrer_id: {self.referrer_id},"
-            f"referred_id: {self.referred_id}"
-        )
+        #
+        return f"<Referral(referrer_id={self.referrer_id}, referred_id={self.referred_id})>"
 
 

@@ -1,15 +1,13 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_async_session
-from app.models.model import User
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
-from app.schemas.schema import UserResponse, UserCreate, TransactionResponse, ReferralCreate, ReferralResponse, \
+from app.schemas.schema import UserResponse, UserCreate, TransactionResponse, ReferralResponse, \
     GetAllReferralsResponse
 from app.services.user_service import UserService
 from fastapi import HTTPException, Request
-from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
-from app.utils.crud_repository import CrudRepository
+
 
 
 router_user = APIRouter()

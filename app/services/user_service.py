@@ -30,6 +30,7 @@ class UserService:
         user_dict = user.model_dump(exclude_unset=True)
         crud_repository = CrudRepository(self.session, User)
         new_user = await crud_repository.create_one(user_dict)
+        print('new_user', new_user)
         return UserResponse.model_validate(new_user)
 
 
