@@ -8,14 +8,16 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     RELOAD: bool = True
 
-
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
     POSTGRES_HOST: str
     POSTGRES_PORT: int
 
-   
+    ALGORITHM: str
+    JWT_SECRET_KEY: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+
 
     @property
     def DATABASE_URL(self) -> str:

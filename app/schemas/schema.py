@@ -1,6 +1,8 @@
 from typing import List
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from decimal import Decimal
+from datetime import datetime
+from pydantic_core.core_schema import ValidationInfo
 
 
 class ReferralCreate(BaseModel):
@@ -63,4 +65,27 @@ class GetAllReferralsResponse(BaseModel):
     user_id: int
     username: str
     referrals: List[UsernameResponse]
+
+
+class UserProfileResponse(BaseModel):
+    id: int
+    username: str
+    referral_code: str
+    created_at:  datetime
+
+
+class RegisterUserSchema(BaseModel):
+    username: str
+    email: str
+    password: str
+    password_check: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator('password_check')
+    def passwords_match(cls, value: str, info: ValidationInfo):
+        password = info.data.get('password')
+        if password and value != password:
+            raise ValueError('Passwords do not match')
+        return value
 

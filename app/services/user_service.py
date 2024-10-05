@@ -1,36 +1,51 @@
-from sqlalchemy.sql.functions import current_user
+import uuid
 
 from app.models.model import User, Transaction, Referral
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
 from app.schemas.schema import UserCreate, UserResponse, TransactionResponse, ReferralCreate, ReferralResponse, \
-    GetAllReferralsResponse
+    GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema, UsernameResponse
 from sqlalchemy import select
 from app.utils.crud_repository import CrudRepository
+from app.utils.exceptions import GenerateReferralCodeException
 from app.utils.pagination import Pagination
-from app.utils.utils import replace_date_format
+from app.utils.utils import replace_date_format, get_hash_password
 
 
 class UserService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-
-    async def is_user_exists(self, user: UserCreate) -> bool:
-        """ check if the user exists in the database """
+    async def is_user_exists(self, field: str, value: str) -> bool:
+        """ Check if user exists by a specific field (email, username) """
         crud_repository = CrudRepository(self.session, User)
-        user = await crud_repository.get_one_by(username=user.username)
-        if user:
-            return True
-        return False
+        filters = {field: value}
+        user = await crud_repository.get_one_by(**filters)
+        return user is not None
 
 
-    async def add_user(self, user: UserCreate) -> UserResponse:
+    async def generate_unique_referral_code(self, max_attempts: int = 2):
+        """this method returns a unique sequence of type string"""
+        attempts = 0
+        while attempts < max_attempts:
+            crud_repository = CrudRepository(self.session, User)
+            code = str(uuid.uuid4())[:10]
+            existing_code = await crud_repository.get_one_by(referral_code=code)
+            if not existing_code:
+                return code
+            attempts += 1
+        raise GenerateReferralCodeException()
+
+
+    async def add_user(self, user: RegisterUserSchema) -> UserResponse:
         """ this method returns a new user  """
-        user_dict = user.model_dump(exclude_unset=True)
+        hashed_password = get_hash_password(user.password)
+        user_dict = user.model_dump(exclude={"password_check", "password"})
+        user_dict["hashed_password"] = hashed_password
+        user_dict["referral_code"] = await self.generate_unique_referral_code()
         crud_repository = CrudRepository(self.session, User)
         new_user = await crud_repository.create_one(user_dict)
-        print('new_user', new_user)
+        print('new_user:', new_user)
         return UserResponse.model_validate(new_user)
 
 
@@ -82,24 +97,19 @@ class UserService:
 
     async def create_referral_by_code(self, code: str, referral: UserCreate ) -> ReferralResponse | None| str:
         """this method returns a referral by a referral code"""
-        referal_crud_repository = CrudRepository(self.session, Referral)
+        referral_crud_repository = CrudRepository(self.session, Referral)
         user_crud_repository = CrudRepository(self.session, User)
         user_referer = await user_crud_repository.get_one_by(referral_code=code)
         print('user_referer:', user_referer)
         if not user_referer:
             return None
-
         existing_user = await user_crud_repository.get_one_by(username=referral.username)
         if existing_user:
-            has_referer = await referal_crud_repository.get_one_by(referred_id=existing_user.id)
+            has_referer = await referral_crud_repository.get_one_by(referred_id=existing_user.id)
             if has_referer:
                 return 'has_referer'
-            new_referal = await referal_crud_repository.create_one({"referrer_id": user_referer.id, "referred_id": existing_user.id})
-            return new_referal
-        new_user = await self.add_user(referral)
-        new_referal = await referal_crud_repository.create_one(
-            {"referrer_id": user_referer.id, "referred_id": new_user.id})
-        return new_referal
+            new_referral = await referral_crud_repository.create_one({"referrer_id": user_referer.id, "referred_id": existing_user.id})
+            return new_referral
 
 
     async def get_my_referrals(self, user_id: int) -> GetAllReferralsResponse | None:
@@ -124,6 +134,17 @@ class UserService:
             })
 
         return GetAllReferralsResponse.model_validate(data)
+
+
+    async def get_user_profile(self, user_id: int) -> UserProfileResponse:
+        """this method returns user by id"""
+        crud_repository = CrudRepository(self.session, User)
+        user = await crud_repository.get_one_by(id=user_id)
+        if user:
+            return user
+
+
+
 
 
 

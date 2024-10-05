@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 from app.utils.crud_repository import CrudRepository
 from sqlalchemy import select
-from decimal import Decimal
+
 
 
 
@@ -57,10 +57,10 @@ class TransactionService:
         referral_crud_repository = CrudRepository(self.session, Referral)
         referral_first_line = await referral_crud_repository.get_one_by(referred_id=transaction.user_id)
         if referral_first_line:
-            # Add bonus only if the transaction amount exceeds the minimum
+            # add bonus only if the transaction amount exceeds the minimum
             if transaction.amount >= self.MINIMUM_TRANSACTION_AMOUNT:
                 referrer_id = referral_first_line.referrer_id
-                bonus_amount_first_line = transaction.amount * self.FIRST_LINE_BONUS_RATE
+                bonus_amount_first_line = transaction.amount * self.FIRST_LINE_BONUS_RATE # 10%
                 bonus_data_first_line = {
                     "user_id": referrer_id,
                     "transaction_type": "bonus_transaction_first_line",
@@ -74,7 +74,7 @@ class TransactionService:
                 if referral_second_line:
                     if transaction.amount >= self.MINIMUM_TRANSACTION_AMOUNT:
                         referrer_id = referral_second_line.referrer_id
-                        bonus_amount_second_line = transaction.amount * self.SECOND_LINE_BONUS_RATE
+                        bonus_amount_second_line = transaction.amount * self.SECOND_LINE_BONUS_RATE # 5%
                         bonus_data_second_line = {
                             "user_id": referrer_id,
                             "transaction_type": "bonus_transaction_second_line",
