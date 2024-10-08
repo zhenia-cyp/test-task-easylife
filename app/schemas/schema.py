@@ -89,3 +89,10 @@ class RegisterUserSchema(BaseModel):
             raise ValueError('Passwords do not match')
         return value
 
+
+class UserSignInRequest(BaseModel):
+        email: str
+        hashed_password: str
+
+        model_config = ConfigDict(from_attributes=True)
+

@@ -6,12 +6,11 @@ from app.utils.crud_repository import CrudRepository
 from sqlalchemy import select
 
 
-
-
 class TransactionService:
     MINIMUM_TRANSACTION_AMOUNT = 10.00
     FIRST_LINE_BONUS_RATE = 0.10
     SECOND_LINE_BONUS_RATE = 0.05
+
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -53,11 +52,11 @@ class TransactionService:
         return TransactionResponse.model_validate(data)
 
 
-    async def add_bonuses(self, transaction: Transaction):
+    async def add_bonuses(self, transaction: Transaction) -> None:
+        # add bonus only if the transaction amount exceeds the minimum
         referral_crud_repository = CrudRepository(self.session, Referral)
         referral_first_line = await referral_crud_repository.get_one_by(referred_id=transaction.user_id)
         if referral_first_line:
-            # add bonus only if the transaction amount exceeds the minimum
             if transaction.amount >= self.MINIMUM_TRANSACTION_AMOUNT:
                 referrer_id = referral_first_line.referrer_id
                 bonus_amount_first_line = transaction.amount * self.FIRST_LINE_BONUS_RATE # 10%

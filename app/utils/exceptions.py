@@ -21,4 +21,10 @@ class GenerateReferralCodeException(Exception):
         super().__init__(self.message)
 
 
+class TokenError(CustomTokenExceptionBase):
+    def __init__(self, detail: str):
+        self.detail = detail
+        super().__init__(detail)
+
+
 

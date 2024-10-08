@@ -1,5 +1,7 @@
 import uuid
 
+from pydantic import BaseModel
+
 from app.models.model import User, Transaction, Referral
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
@@ -10,11 +12,14 @@ from app.utils.crud_repository import CrudRepository
 from app.utils.exceptions import GenerateReferralCodeException
 from app.utils.pagination import Pagination
 from app.utils.utils import replace_date_format, get_hash_password
+from typing import Type
 
 
 class UserService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, schema: Type[BaseModel] = None):
         self.session = session
+        self.schema = schema
+
 
     async def is_user_exists(self, field: str, value: str) -> bool:
         """ Check if user exists by a specific field (email, username) """
@@ -95,7 +100,7 @@ class UserService:
         return PaginationListResponse.model_validate(users)
 
 
-    async def create_referral_by_code(self, code: str, referral: UserCreate ) -> ReferralResponse | None| str:
+    async def create_referral_by_code(self, code: str, referral: UserCreate ) -> ReferralResponse | None| bool:
         """this method returns a referral by a referral code"""
         referral_crud_repository = CrudRepository(self.session, Referral)
         user_crud_repository = CrudRepository(self.session, User)
@@ -107,7 +112,7 @@ class UserService:
         if existing_user:
             has_referer = await referral_crud_repository.get_one_by(referred_id=existing_user.id)
             if has_referer:
-                return 'has_referer'
+                return True
             new_referral = await referral_crud_repository.create_one({"referrer_id": user_referer.id, "referred_id": existing_user.id})
             return new_referral
 
@@ -136,7 +141,7 @@ class UserService:
         return GetAllReferralsResponse.model_validate(data)
 
 
-    async def get_user_profile(self, user_id: int) -> UserProfileResponse:
+    async def get_user_profile(self, user_id:int) -> UserProfileResponse:
         """this method returns user by id"""
         crud_repository = CrudRepository(self.session, User)
         user = await crud_repository.get_one_by(id=user_id)
