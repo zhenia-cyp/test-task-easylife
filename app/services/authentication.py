@@ -13,7 +13,7 @@ class AuthService:
 
 
     async def authenticate_user(self, user, current_user):
-        if not verify_password(user.hashed_password, current_user.hashed_password):
+        if not verify_password(user.password, current_user.hashed_password):
             return False
         access_token = create_access_token(data={"sub": current_user.email})
         return access_token

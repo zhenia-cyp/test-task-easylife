@@ -92,7 +92,12 @@ class RegisterUserSchema(BaseModel):
 
 class UserSignInRequest(BaseModel):
         email: str
-        hashed_password: str
+        password: str
 
         model_config = ConfigDict(from_attributes=True)
 
+
+class DeleteResponse(BaseModel):
+    delete: bool
+
+    model_config = ConfigDict(from_attributes=True)

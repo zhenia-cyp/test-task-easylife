@@ -4,22 +4,20 @@ from app.db.database import get_async_session
 from app.models.model import User
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
 from app.schemas.schema import UserResponse, UserCreate, TransactionResponse, ReferralResponse, \
-    GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema, UserSignInRequest
+    GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema, UserSignInRequest, DeleteResponse
 from app.services.authentication import AuthService
 from app.services.user_service import UserService
 from fastapi import HTTPException, Request
-from fastapi.responses import HTMLResponse
 from app.utils.crud_repository import CrudRepository
 from fastapi.security import HTTPBearer
 from fastapi import Response
-from fastapi import Cookie
 
 
 router_user = APIRouter()
 token_auth_scheme = HTTPBearer()
 
 
-@router_user.post("/register/user/", response_model=UserResponse)
+@router_user.post("/register/user/", response_model=UserResponse,  summary="register a new user")
 async def add_user(user: RegisterUserSchema, session: AsyncSession = Depends(get_async_session)):
     user_service = UserService(session)
     email = await user_service.is_user_exists('email', user.email)
@@ -34,7 +32,7 @@ async def add_user(user: RegisterUserSchema, session: AsyncSession = Depends(get
     return user
 
 
-@router_user.post("/login/")
+@router_user.post("/login/", summary="to log into the system")
 async def login(response: Response, user: UserSignInRequest, session: AsyncSession = Depends(get_async_session)):
     user_crud_repository = CrudRepository(session, User)
     current_user = await user_crud_repository.get_one_by(email=user.email)
@@ -48,14 +46,14 @@ async def login(response: Response, user: UserSignInRequest, session: AsyncSessi
         key="you_kent_find_it",
         value=f"Bearer {token}",
         httponly=True,
-        max_age=60 * 60 * 12,
+        max_age=60 * 60 * 5,
         secure=False,
         samesite="lax"
     )
     return {"message": "Successfully logged in"}
 
 
-@router_user.get("/get/user/{user_id}/", response_model=PaginationResponse[TransactionResponse])
+@router_user.get("/get/user/{user_id}/", response_model=PaginationResponse[TransactionResponse], summary="get user transactions")
 async def get_user(user_id: int, session: AsyncSession = Depends(get_async_session), page_params: PageParams = Depends(PageParams)):
     user_service = UserService(session)
     transactions = await user_service.get_user(user_id, page_params)
@@ -64,37 +62,39 @@ async def get_user(user_id: int, session: AsyncSession = Depends(get_async_sessi
     return transactions
 
 
-@router_user.get("/get/all/users/", response_model=PaginationListResponse)
-async def get_user(session: AsyncSession = Depends(get_async_session), page_params: PageParams = Depends(PageParams)):
-    user_service = UserService(session)
-    users = await user_service.get_all_users(page_params)
-    return users
-
-
-@router_user.get("/")
+@router_user.get("/", summary="admin panel")
 async def home(request: Request, session: AsyncSession = Depends(get_async_session)):
     token = request.cookies.get('you_kent_find_it')
     if not token:
         raise HTTPException(status_code=401, detail="Unauthorized")
     auth_service = AuthService(session)
     user = await auth_service.get_user_by_token(token.replace("Bearer ", ""))
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is not active")
     context = {"request": request, "name": user}
     from app.main import templates
     return templates.TemplateResponse("index.html", context)
 
 
-@router_user.post("/create/referral/by/{code}/", response_model=ReferralResponse)
+@router_user.get("/get/all/users/", response_model=PaginationListResponse, summary="get all users along with their transactions")
+async def get_user(session: AsyncSession = Depends(get_async_session), page_params: PageParams = Depends(PageParams)):
+    user_service = UserService(session)
+    users = await user_service.get_all_users(page_params)
+    return users
+
+
+@router_user.post("/create/referral/by/{code}/", response_model=ReferralResponse, summary="create a new referral using a referral code")
 async def create_referral(code: str, referral: UserCreate, session: AsyncSession = Depends(get_async_session)):
     user_service = UserService(session)
     user = await user_service.create_referral_by_code(code, referral) # code - referer
     if not user:
         raise HTTPException(status_code=404, detail="Referer with this code not found")
     if user:
-        raise HTTPException(status_code=404, detail="User already has referer")
+        raise HTTPException(status_code=400, detail="User already has referer")
     return user
 
 
-@router_user.get("/get/all/referrals/{user_id}", response_model=GetAllReferralsResponse)
+@router_user.get("/get/all/referrals/{user_id}/", response_model=GetAllReferralsResponse, summary="get all referrals by user id")
 async def get_referrals(user_id: int, session: AsyncSession = Depends(get_async_session)):
     user_service = UserService(session)
     referrals = await user_service.get_my_referrals(user_id)
@@ -103,9 +103,28 @@ async def get_referrals(user_id: int, session: AsyncSession = Depends(get_async_
     return referrals
 
 
-@router_user.get("/get/user/profile/{user_id}/", response_model=UserProfileResponse)
+@router_user.get("/get/all/not/refferals/{user_id}/", response_model=UserProfileResponse, summary="list of users who are not referred by the current user")
+async def get_not_referral_users(user_id: int, session: AsyncSession = Depends(get_async_session)):
+    user_service = UserService(session)
+    user = await user_service.get_non_referrals(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@router_user.get("/get/user/profile/{user_id}/", response_model=UserProfileResponse, summary="get user profile information by their id")
 async def get_user(user_id: int, session: AsyncSession = Depends(get_async_session)):
     user_service = UserService(session)
     user = await user_service.get_user_profile(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     return user
 
+
+@router_user.delete("/referrals/{referred_id}/current_user_id/", response_model=DeleteResponse)
+async def remove_referral(referred_id: int, current_user_id: int, session: AsyncSession = Depends(get_async_session) ):
+    user_service = UserService(session)
+    success = await user_service.delete_referral(referrer_id=current_user_id, referred_id=referred_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Referral not found or not authorized to delete")
+    return success

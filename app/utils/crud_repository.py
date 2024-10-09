@@ -1,5 +1,6 @@
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.exc import SQLAlchemyError
+from typing import Union
 
 
 class CrudRepository:
@@ -38,5 +39,15 @@ class CrudRepository:
             result = await self.session.execute(stmt)
             result = result.scalars().all()
             return result
+
+
+    async def delete_one(self, delete_param: Union[int, object]):
+        if isinstance(delete_param, int):
+            stmt = delete(self.model).where(self.model.id == delete_param)
+            await self.session.execute(stmt)
+        elif isinstance(delete_param, self.model):
+            await self.session.delete(delete_param)
+        await self.session.commit()
+        return True
 
 
