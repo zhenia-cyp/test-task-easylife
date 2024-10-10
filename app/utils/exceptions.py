@@ -1,3 +1,6 @@
+from http.client import HTTPException
+
+
 class CustomTokenExceptionBase(Exception):
     def init(self, detail: str):
         self.detail = detail
@@ -25,6 +28,11 @@ class TokenError(CustomTokenExceptionBase):
     def __init__(self, detail: str):
         self.detail = detail
         super().__init__(detail)
+
+
+class TokenNotFoundException(HTTPException):
+    def __init__(self, detail: str = "Unauthorized: token not found"):
+        super().__init__(401, detail)
 
 
 

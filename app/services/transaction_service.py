@@ -1,9 +1,10 @@
-from app.models.model import Transaction, Referral
+from app.models.model import Transaction, Referral, Wallet
 from app.schemas.schema import TransactionCreate, TransactionResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 from app.utils.crud_repository import CrudRepository
 from sqlalchemy import select
+import decimal
 
 
 class TransactionService:
@@ -53,32 +54,41 @@ class TransactionService:
 
 
     async def add_bonuses(self, transaction: Transaction) -> None:
-        # add bonus only if the transaction amount exceeds the minimum
+        if transaction.amount < self.MINIMUM_TRANSACTION_AMOUNT:
+            return
+
         referral_crud_repository = CrudRepository(self.session, Referral)
         referral_first_line = await referral_crud_repository.get_one_by(referred_id=transaction.user_id)
         if referral_first_line:
-            if transaction.amount >= self.MINIMUM_TRANSACTION_AMOUNT:
-                referrer_id = referral_first_line.referrer_id
-                bonus_amount_first_line = transaction.amount * self.FIRST_LINE_BONUS_RATE # 10%
-                bonus_data_first_line = {
-                    "user_id": referrer_id,
-                    "transaction_type": "bonus_transaction_first_line",
-                    "amount": bonus_amount_first_line
-                }
-                crud_repository = CrudRepository(self.session, Transaction)
-                bonus_transaction_first_line = await crud_repository.create_one(bonus_data_first_line)
-                print('bonus_transaction_first_line: ', bonus_transaction_first_line)
+            referrer_id_first_line = referral_first_line.referrer_id
+            bonus_amount_first_line = transaction.amount * self.FIRST_LINE_BONUS_RATE  # 10%
+            await self.update_wallet_balance(referrer_id_first_line, bonus_amount_first_line, line="first")
+            print(f'Bonus {bonus_amount_first_line} first line (user_id: {referrer_id_first_line})')
 
-                referral_second_line = await referral_crud_repository.get_one_by(referred_id=referrer_id)
-                if referral_second_line:
-                    if transaction.amount >= self.MINIMUM_TRANSACTION_AMOUNT:
-                        referrer_id = referral_second_line.referrer_id
-                        bonus_amount_second_line = transaction.amount * self.SECOND_LINE_BONUS_RATE # 5%
-                        bonus_data_second_line = {
-                            "user_id": referrer_id,
-                            "transaction_type": "bonus_transaction_second_line",
-                            "amount": bonus_amount_second_line
-                        }
-                        bonus_transaction_second_line = await crud_repository.create_one(bonus_data_second_line)
-                        print('bonus_transaction_second_line: ', bonus_transaction_second_line)
+            referral_second_line = await referral_crud_repository.get_one_by(referred_id=referrer_id_first_line)
+            if referral_second_line:
+                referrer_id_second_line = referral_second_line.referrer_id
+                bonus_amount_second_line = transaction.amount * self.SECOND_LINE_BONUS_RATE  # 5%
+                await self.update_wallet_balance(referrer_id_second_line, bonus_amount_second_line, line="second")
+                print(f'Bonus {bonus_amount_second_line} second line (user_id: {referrer_id_second_line})')
 
+
+    async def update_wallet_balance(self, user_id: int, bonus_amount: float, line: str) -> None:
+        wallet_crud_repository = CrudRepository(self.session, Wallet)
+        wallet = await wallet_crud_repository.get_one_by(user_id=user_id)
+        if wallet:
+            wallet.balance += decimal.Decimal(bonus_amount)  # Convert float to decimal
+            if line == "first":
+                wallet.first_line_bonus_balance += decimal.Decimal(bonus_amount)
+            elif line == "second":
+                wallet.second_line_bonus_balance += decimal.Decimal(bonus_amount)
+        else:
+            wallet_data = {
+                'user_id': user_id,
+                'balance': decimal.Decimal(bonus_amount),  # Convert float to decimal
+                'first_line_bonus_balance': decimal.Decimal(bonus_amount) if line == "first" else decimal.Decimal(0),
+                'second_line_bonus_balance': decimal.Decimal(bonus_amount) if line == "second" else decimal.Decimal(0),
+            }
+            await wallet_crud_repository.create_one(wallet_data)
+
+        await self.session.commit()

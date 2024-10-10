@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Boolean, Integer, String, func,  ForeignKey, MetaData, DateTime, Float
+from sqlalchemy import Column, Boolean, Integer, String, func,  ForeignKey, MetaData, DateTime, Float, Numeric
 from sqlalchemy.orm import declarative_base
 import datetime
 from sqlalchemy.orm import validates
 from pytz import timezone
+
 
 
 Base = declarative_base()
@@ -86,5 +87,31 @@ class Referral(Base):
     def __repr__(self):
         return f"Referral(id={self.id}, referrer_id={self.referrer_id}, " \
                f"referred_id={self.referred_id})"
+
+
+class Wallet(Base):
+    __tablename__ = 'wallet'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'),  nullable=False)
+    balance = Column(Numeric(precision=10, scale=2), default=0.00)
+    first_line_bonus_balance = Column(Numeric(precision=10, scale=2), default=0.00)
+    second_line_bonus_balance = Column(Numeric(precision=10, scale=2), default=0.00)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=datetime.datetime.now())
+
+
+    def __str__(self):
+        return f"Wallet: id: {self.id}, user_id: {self.user_id}, " \
+               f"balance: {self.balance}, first_line_bonus_balance: {self.first_line_bonus_balance}, " \
+               f"second_line_bonus_balance: {self.second_line_bonus_balance}"
+
+
+    def __repr__(self):
+        return f"Wallet: id: {self.id}, user_id: {self.user_id}, " \
+               f"balance: {self.balance}, first_line_bonus_balance: {self.first_line_bonus_balance}, " \
+               f"second_line_bonus_balance: {self.second_line_bonus_balance}"
+
+
 
 

@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime
 import jwt
 from app.core.config import settings
-from app.utils.exceptions import CredentialsException, TokenExpiredException
+from app.utils.exceptions import CredentialsException, TokenExpiredException, TokenNotFoundException
 
 
 def create_access_token(data: dict):

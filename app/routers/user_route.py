@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_async_session
-from app.models.model import User
+from app.models.model import User, Wallet
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
 from app.schemas.schema import UserResponse, UserCreate, TransactionResponse, ReferralResponse, \
     GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema, UserSignInRequest, DeleteResponse
@@ -11,10 +11,12 @@ from fastapi import HTTPException, Request
 from app.utils.crud_repository import CrudRepository
 from fastapi.security import HTTPBearer
 from fastapi import Response
-
+import logging
+from app.utils.exceptions import TokenNotFoundException
 
 router_user = APIRouter()
 token_auth_scheme = HTTPBearer()
+logger = logging.getLogger(__name__)
 
 
 @router_user.post("/register/user/", response_model=UserResponse,  summary="register a new user")
@@ -37,20 +39,26 @@ async def login(response: Response, user: UserSignInRequest, session: AsyncSessi
     user_crud_repository = CrudRepository(session, User)
     current_user = await user_crud_repository.get_one_by(email=user.email)
     if current_user is None:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=401, detail="User not found")
     auth_service = AuthService(session)
     token = await auth_service.authenticate_user(user, current_user)
-    if token is False:
-          raise HTTPException(status_code=400,detail="Unauthorized")
+    if token is None:
+          raise HTTPException(status_code=400,detail="Token not found")
     response.set_cookie(
         key="you_kent_find_it",
         value=f"Bearer {token}",
         httponly=True,
-        max_age=60 * 60 * 5,
+        max_age=60 * 60 * 25,
         secure=False,
         samesite="lax"
     )
     return {"message": "Successfully logged in"}
+
+
+@router_user.post("/logout/")
+async def logout_user(response: Response):
+    response.delete_cookie(key="you_kent_find_it")
+    return {"message": "Successfully logged out"}
 
 
 @router_user.get("/get/user/{user_id}/", response_model=PaginationResponse[TransactionResponse], summary="get user transactions")
@@ -66,12 +74,15 @@ async def get_user(user_id: int, session: AsyncSession = Depends(get_async_sessi
 async def home(request: Request, session: AsyncSession = Depends(get_async_session)):
     token = request.cookies.get('you_kent_find_it')
     if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise TokenNotFoundException()
     auth_service = AuthService(session)
     user = await auth_service.get_user_by_token(token.replace("Bearer ", ""))
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account is not active")
-    context = {"request": request, "name": user}
+    wallet_crud_repository = CrudRepository(session, Wallet)
+    wallet = await wallet_crud_repository.get_one_by(user_id=user.id)
+    print('что здесь: ', wallet)
+    context = {"request": request, "name": user, "wallet": wallet}
     from app.main import templates
     return templates.TemplateResponse("index.html", context)
 
@@ -89,7 +100,7 @@ async def create_referral(code: str, referral: UserCreate, session: AsyncSession
     user = await user_service.create_referral_by_code(code, referral) # code - referer
     if not user:
         raise HTTPException(status_code=404, detail="Referer with this code not found")
-    if user:
+    if user == 'has_referer':
         raise HTTPException(status_code=400, detail="User already has referer")
     return user
 
@@ -121,7 +132,7 @@ async def get_user(user_id: int, session: AsyncSession = Depends(get_async_sessi
     return user
 
 
-@router_user.delete("/referrals/{referred_id}/current_user_id/", response_model=DeleteResponse)
+@router_user.delete("/referrals/{referred_id}/current_user_id/", response_model=DeleteResponse, summary="deletion of your referral")
 async def remove_referral(referred_id: int, current_user_id: int, session: AsyncSession = Depends(get_async_session) ):
     user_service = UserService(session)
     success = await user_service.delete_referral(referrer_id=current_user_id, referred_id=referred_id)

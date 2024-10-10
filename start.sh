@@ -1,4 +1,4 @@
 #!/bin/bash
-#alembic upgrade head
+alembic upgrade head
 python3 -m app.main
 

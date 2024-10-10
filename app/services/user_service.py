@@ -48,7 +48,7 @@ class UserService:
         user_dict["referral_code"] = await self.generate_unique_referral_code()
         crud_repository = CrudRepository(self.session, User)
         new_user = await crud_repository.create_one(user_dict)
-        print('new_user:', new_user)
+        print('new_user: ', new_user)
         return UserResponse.model_validate(new_user)
 
 
@@ -98,20 +98,24 @@ class UserService:
         return PaginationListResponse.model_validate(users)
 
 
-    async def create_referral_by_code(self, code: str, referral: UserCreate ) -> ReferralResponse | None| bool:
+    async def create_referral_by_code(self, code: str, referral: UserCreate ) -> ReferralResponse | None| bool | str:
         """this method returns a referral by a referral code"""
         referral_crud_repository = CrudRepository(self.session, Referral)
         user_crud_repository = CrudRepository(self.session, User)
         user_referer = await user_crud_repository.get_one_by(referral_code=code)
         print('user_referer:', user_referer)
-        if not user_referer:
+        if user_referer is None:
             return None
         existing_user = await user_crud_repository.get_one_by(username=referral.username)
+        print('existing_user:', existing_user)
         if existing_user:
             has_referer = await referral_crud_repository.get_one_by(referred_id=existing_user.id)
+            print('has_referer: ',has_referer )
             if has_referer:
-                return True
-            new_referral = await referral_crud_repository.create_one({"referrer_id": user_referer.id, "referred_id": existing_user.id})
+                return "has_referer"
+            new_referral = await referral_crud_repository.create_one(
+                {"referrer_id": user_referer.id, "referred_id": existing_user.id})
+            print('new_referral: ', new_referral)
             return new_referral
 
 
@@ -142,7 +146,6 @@ class UserService:
     async def get_non_referrals(self, user_id: int) -> GetAllReferralsResponse | None:
         """returns a list of users who are not referred by the current user and not referred by anyone else."""
         user_crud_repository = CrudRepository(self.session, User)
-
         current_user = await user_crud_repository.get_one_by(id=user_id)
         if not current_user:
             return None
