@@ -34,20 +34,21 @@
         <button class="btn-stats">Show Statistics</button>
         <div class="stats-item">
             <span>Number of Purchases:</span>
-            <span>42 pcs</span>
+            <span>{{ wallet.purchases }} pcs</span>
         </div>
         <div class="stats-item">
             <span>Earned from Level 1:</span>
-            <span>1068.8 USD</span>
+            <span>{{ wallet.first_line }} USD</span>
         </div>
         <div class="stats-item">
             <span>Earned from Level 2:</span>
-            <span>0.0 USD</span>
+            <span>{{ wallet.second_line }} USD</span>
         </div>
         <div class="stats-item">
             <span>Total Earnings:</span>
-            <span>3406 USD</span>
+            <span>{{ wallet.balance }} USD</span>
         </div>
+         <button class="btn-stats payout">payout request</button>
     </div>
 </div>
 

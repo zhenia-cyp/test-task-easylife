@@ -13,6 +13,7 @@ from fastapi.security import HTTPBearer
 from fastapi import Response
 import logging
 from app.utils.exceptions import TokenNotFoundException
+from tests.conftest import user_service
 
 router_user = APIRouter()
 token_auth_scheme = HTTPBearer()
@@ -42,6 +43,7 @@ async def login(response: Response, user: UserSignInRequest, session: AsyncSessi
         raise HTTPException(status_code=401, detail="User not found")
     auth_service = AuthService(session)
     token = await auth_service.authenticate_user(user, current_user)
+    print('token:', token)
     if token is None:
           raise HTTPException(status_code=400,detail="Token not found")
     response.set_cookie(
@@ -52,6 +54,7 @@ async def login(response: Response, user: UserSignInRequest, session: AsyncSessi
         secure=False,
         samesite="lax"
     )
+    print(response)
     return {"message": "Successfully logged in"}
 
 
@@ -81,7 +84,6 @@ async def home(request: Request, session: AsyncSession = Depends(get_async_sessi
         raise HTTPException(status_code=403, detail="Account is not active")
     wallet_crud_repository = CrudRepository(session, Wallet)
     wallet = await wallet_crud_repository.get_one_by(user_id=user.id)
-    print('что здесь: ', wallet)
     context = {"request": request, "name": user, "wallet": wallet}
     from app.main import templates
     return templates.TemplateResponse("index.html", context)

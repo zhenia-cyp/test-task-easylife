@@ -18,3 +18,12 @@ async def create_transactions(transaction: TransactionCreate, session: AsyncSess
     return new_transaction
 
 
+@router_transaction.post("/request/{payout}/{user_id}/", response_model=TransactionResponse)
+async def request_payout(user_id: int, payout: float, session: AsyncSession = Depends(get_async_session)):
+    transaction_service = TransactionService(session)
+    payout_transaction = await transaction_service.request_payout(user_id, payout)
+    if not payout_transaction:
+        raise HTTPException(status_code=400, detail="Payout transaction not found!")
+    return payout_transaction
+
+

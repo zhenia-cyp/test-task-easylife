@@ -95,22 +95,25 @@ class Wallet(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id'),  nullable=False)
     balance = Column(Numeric(precision=10, scale=2), default=0.00)
-    first_line_bonus_balance = Column(Numeric(precision=10, scale=2), default=0.00)
-    second_line_bonus_balance = Column(Numeric(precision=10, scale=2), default=0.00)
+    first_line = Column(Numeric(precision=10, scale=2), default=0.00)
+    second_line = Column(Numeric(precision=10, scale=2), default=0.00)
+    purchases = Column(Integer, nullable=True, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=datetime.datetime.now())
 
 
     def __str__(self):
         return f"Wallet: id: {self.id}, user_id: {self.user_id}, " \
-               f"balance: {self.balance}, first_line_bonus_balance: {self.first_line_bonus_balance}, " \
-               f"second_line_bonus_balance: {self.second_line_bonus_balance}"
+               f"balance: {self.balance}, first_line: {self.first_line}, " \
+               f"second_line: {self.second_line},  " \
+               f"purchases: {self.purchases}  "
 
 
     def __repr__(self):
         return f"Wallet: id: {self.id}, user_id: {self.user_id}, " \
-               f"balance: {self.balance}, first_line_bonus_balance: {self.first_line_bonus_balance}, " \
-               f"second_line_bonus_balance: {self.second_line_bonus_balance}"
+               f"balance: {self.balance}, first_line: {self.first_line}, " \
+               f"second_line: {self.second_line}, " \
+               f"purchases: {self.purchases}  "
 
 
 
