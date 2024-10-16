@@ -3,14 +3,14 @@ from pydantic import BaseModel
 from app.models.model import User, Transaction, Referral
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
-from app.schemas.schema import UserCreate, UserResponse, TransactionResponse, ReferralCreate, ReferralResponse, \
-    GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema, UsernameResponse
+from app.schemas.schema import UserCreate, UserResponse, TransactionResponse, ReferralResponse, \
+    GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema
 from sqlalchemy import select
 from app.utils.crud_repository import CrudRepository
 from app.utils.exceptions import GenerateReferralCodeException
 from app.utils.pagination import Pagination
 from app.utils.utils import replace_date_format, get_hash_password
-from typing import Type
+from typing import Type, List
 
 
 class UserService:

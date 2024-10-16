@@ -1,10 +1,16 @@
-from app.models.model import Transaction, Referral, Wallet
-from app.schemas.schema import TransactionCreate, TransactionResponse
+from typing import List
+
+from app.models.model import Transaction, Referral, Wallet, User
+from app.schemas.schema import TransactionCreate, TransactionResponse, BalanceResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
+
+from app.services.user_service import UserService
 from app.utils.crud_repository import CrudRepository
 from sqlalchemy import select
 import decimal
+from app.utils.utils import replace_date_format
+
 
 
 class TransactionService:
@@ -42,7 +48,7 @@ class TransactionService:
 
     async def transaction_response(self, transaction: Transaction) -> TransactionResponse:
         """create a TransactionResponse object from a Transaction"""
-        formatted_date = transaction.get_transaction_date_in_local().strftime('%d.%m.%Y, %H:%M')
+        formatted_date = transaction.get_transaction_date_in_local().strftime('%Y-%m-%d, %H:%M')
         data = {
             "id": transaction.id,
             "user_id": transaction.user_id,
@@ -102,7 +108,7 @@ class TransactionService:
 
 
     async def request_payout(self, user_id: int, payout: float) -> TransactionResponse | dict:
-        """this method returns a transaction - a request to withdraw funds earned from referrals"""
+        """This method returns a transaction - a request to withdraw funds earned from referrals"""
         wallet_crud_repository = CrudRepository(self.session, Wallet)
         transaction_crud_repository = CrudRepository(self.session, Transaction)
 
@@ -119,6 +125,11 @@ class TransactionService:
         if wallet.balance < decimal.Decimal(payout):
             return {"status": "error", "message": "Insufficient balance for withdrawal"}
 
+        wallet.balance -= decimal.Decimal(payout)
+
+        if wallet.balance < 0:
+            return {"status": "error", "message": "The wallet balance cannot be less than zero"}
+
         data = {
             'user_id': user_id,
             'transaction_type': 'request_payout',
@@ -126,9 +137,81 @@ class TransactionService:
         }
         transaction = await transaction_crud_repository.create_one(data)
 
-        wallet.balance = decimal.Decimal(0)
-        wallet.first_line_bonus_balance = decimal.Decimal(0)
-        wallet.second_line_bonus_balance = decimal.Decimal(0)
-        wallet.purchases = decimal.Decimal(0)
-        await self.session.commit()
+        if transaction and wallet.balance == decimal.Decimal(0):
+            wallet.balance = decimal.Decimal(0)
+            wallet.first_line = decimal.Decimal(0)
+            wallet.second_line = decimal.Decimal(0)
+            wallet.purchases = decimal.Decimal(0)
+            await self.session.commit()
+            return TransactionResponse.model_validate(transaction)
         return TransactionResponse.model_validate(transaction)
+
+
+    async def filter_bonus_transactions_by_date(
+            self, user_id: int, start_date: str | None, end_date: str | None) ->  List[TransactionResponse]:
+        """this method returns first and second-line referral transactions filtered by date"""
+        referral_crud_repository = CrudRepository(self.session, Referral)
+        first_line_referrals = await referral_crud_repository.get_all_by(referrer_id=user_id)
+        first_line_user_ids = [referral.referred_id for referral in first_line_referrals]
+
+        second_line_stmt = select(Referral.referred_id).where(Referral.referrer_id.in_(first_line_user_ids))
+        result = await self.session.execute(second_line_stmt)
+        second_line_user_ids = [row[0] for row in result.all()]
+
+        all_referred_ids = first_line_user_ids + second_line_user_ids
+
+        if not all_referred_ids:
+            return []
+        stmt = select(Transaction).where(Transaction.user_id.in_(all_referred_ids))
+        start_date = datetime.strptime(start_date, "%d-%m-%Y")
+        if start_date:
+            stmt = stmt.where(Transaction.transaction_date >= start_date)
+        end_date = datetime.strptime(end_date, "%d-%m-%Y")
+        if end_date:
+            stmt = stmt.where(Transaction.transaction_date <= end_date)
+        result = await self.session.execute(stmt)
+        transactions = result.scalars().all()
+        transactions = await replace_date_format(transactions)
+        return transactions
+
+
+    async def get_user_balance(self, user_id: int) -> BalanceResponse | None:
+        wallet_crud_repository = CrudRepository(self.session, Wallet)
+        wallet = await wallet_crud_repository.get_one_by(user_id=user_id)
+        if wallet is None:
+            return None
+        return BalanceResponse(balance=wallet.balance)
+
+
+    async def filter_payout_transaction_by_date(
+            self, user_id: int, start_date: str | None, end_date: str | None) -> List[dict]:
+        """This method returns payout transactions filtered by date range for a specific user"""
+
+        start_date_obj = datetime.strptime(start_date, "%d-%m-%Y") if start_date else None
+        end_date_obj = datetime.strptime(end_date, "%d-%m-%Y") if end_date else None
+
+
+        stmt = select(Transaction).where(
+            Transaction.user_id == user_id,
+            Transaction.transaction_type == 'request_payout'
+        )
+
+        if start_date_obj:
+            stmt = stmt.where(Transaction.transaction_date >= start_date_obj)
+        if end_date_obj:
+            stmt = stmt.where(Transaction.transaction_date <= end_date_obj)
+
+        result = await self.session.execute(stmt)
+        transactions = result.scalars().all()
+
+
+        return [
+            {
+                "id": t.id,
+                "user_id": t.user_id,
+                "transaction_type": t.transaction_type,
+                "amount": str(t.amount),
+                "transaction_date": t.transaction_date.isoformat()
+            }
+            for t in transactions
+        ] if transactions else []

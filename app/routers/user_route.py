@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_async_session
-from app.models.model import User, Wallet
+from app.models.model import User, Wallet, Transaction
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
 from app.schemas.schema import UserResponse, UserCreate, TransactionResponse, ReferralResponse, \
     GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema, UserSignInRequest, DeleteResponse
 from app.services.authentication import AuthService
+from app.services.transaction_service import TransactionService
 from app.services.user_service import UserService
 from fastapi import HTTPException, Request
 from app.utils.crud_repository import CrudRepository
@@ -13,7 +14,7 @@ from fastapi.security import HTTPBearer
 from fastapi import Response
 import logging
 from app.utils.exceptions import TokenNotFoundException
-from tests.conftest import user_service
+
 
 router_user = APIRouter()
 token_auth_scheme = HTTPBearer()
@@ -43,7 +44,6 @@ async def login(response: Response, user: UserSignInRequest, session: AsyncSessi
         raise HTTPException(status_code=401, detail="User not found")
     auth_service = AuthService(session)
     token = await auth_service.authenticate_user(user, current_user)
-    print('token:', token)
     if token is None:
           raise HTTPException(status_code=400,detail="Token not found")
     response.set_cookie(
@@ -54,7 +54,6 @@ async def login(response: Response, user: UserSignInRequest, session: AsyncSessi
         secure=False,
         samesite="lax"
     )
-    print(response)
     return {"message": "Successfully logged in"}
 
 
@@ -82,11 +81,13 @@ async def home(request: Request, session: AsyncSession = Depends(get_async_sessi
     user = await auth_service.get_user_by_token(token.replace("Bearer ", ""))
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account is not active")
+
     wallet_crud_repository = CrudRepository(session, Wallet)
     wallet = await wallet_crud_repository.get_one_by(user_id=user.id)
     context = {"request": request, "name": user, "wallet": wallet}
     from app.main import templates
     return templates.TemplateResponse("index.html", context)
+
 
 
 @router_user.get("/get/all/users/", response_model=PaginationListResponse, summary="get all users along with their transactions")
@@ -141,3 +142,6 @@ async def remove_referral(referred_id: int, current_user_id: int, session: Async
     if not success:
         raise HTTPException(status_code=404, detail="Referral not found or not authorized to delete")
     return success
+
+
+

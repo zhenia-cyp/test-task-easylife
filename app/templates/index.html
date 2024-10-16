@@ -5,31 +5,33 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel</title>
-    <!-- Link to external CSS -->
-   <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='css/style.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </head>
 <body>
 
 <div class="container">
     <div class="request-panel">
-
         <h2>Payout Requests</h2>
         <div class="request-item">
             <span>Payout No. 31</span>
             <span class="author">{{name.username}}</span>
-            <button class="btn-view">View</button>
+<!--            <button class="payout" data-user-id="{{name.id}}" data-payout="100">payout</button>-->
+        </div>
+        <div class="transactions">
         </div>
     </div>
 
     <div class="stats-panel">
-        <h3 class="stats-header">Statistics from 05.05.2024</h3>
+        <h3 class="stats-header"> Statistics from 05-05-2024</h3>
         <div class="stats-item">
             <span>Start Date:</span>
-            <input type="date" value="2024-05-05">
+            <input type="text" id="startDate">
         </div>
         <div class="stats-item">
             <span>End Date:</span>
-            <input type="date">
+            <input type="text" id="endDate">
         </div>
         <button class="btn-stats">Show Statistics</button>
         <div class="stats-item">
@@ -48,9 +50,134 @@
             <span>Total Earnings:</span>
             <span>{{ wallet.balance }} USD</span>
         </div>
-         <button class="btn-stats payout">payout request</button>
     </div>
 </div>
 
+<script>
+    flatpickr("#startDate", {
+        dateFormat: "d-m-Y"
+    });
+
+    flatpickr("#endDate", {
+        dateFormat: "d-m-Y"
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+    const filterBtn = document.querySelector('.btn-stats');
+    const payoutButton = document.querySelector('.payout');
+    const startDateInput = document.querySelector('#startDate');
+    const endDateInput = document.querySelector('#endDate');
+    const transactionsContainer = document.querySelector('.transactions');
+
+
+    filterBtn.addEventListener('click', async function () {
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const header = document.querySelector('.stats-header');
+        header.innerHTML = 'Statistics from ' + startDateInput.value;
+
+        if (!startDate && !endDate) {
+            showMessage('Please select both start date and end date');
+            return;
+        } else if (!startDate) {
+            showMessage('Please select start date');
+            return;
+        } else if (!endDate) {
+            showMessage('Please select end date');
+            return;
+        }
+
+        const userId = "{{name.id}}";
+        const bonusUrl = `/filter/bonus/${userId}/${startDate}/${endDate}/`;
+        const payoutUrl = `/filter/payout/${userId}/${startDate}/${endDate}/`;
+
+        try {
+            const [bonusResponse, payoutResponse] = await Promise.all([
+                fetch(bonusUrl, { method: 'GET', headers: { 'Content-Type': 'application/json' } }),
+                fetch(payoutUrl, { method: 'GET', headers: { 'Content-Type': 'application/json' } })
+            ]);
+
+            const bonusTransactions = bonusResponse.ok ? await bonusResponse.json() : [];
+            const payoutTransactions = payoutResponse.ok ? await payoutResponse.json() : [];
+
+            transactionsContainer.innerHTML = '';
+
+            // Отобразить транзакции request_payout поверх бонусных транзакций
+            payoutTransactions.forEach(transaction => {
+                const transactionElement = document.createElement('div');
+                transactionElement.innerHTML = `
+                    <p>Payout transaction:</p>
+                    <p>User id: ${transaction.user_id}</p>
+                    <p>Type: ${transaction.transaction_type}</p>
+                    <p>Amount: ${transaction.amount}</p>
+                    <p>Date: ${transaction.transaction_date}</p>
+                    <br>
+                `;
+                transactionsContainer.appendChild(transactionElement);
+            });
+
+            bonusTransactions.forEach(transaction => {
+                const transactionElement = document.createElement('div');
+                transactionElement.innerHTML = `
+                    <p>Bonus transaction:</p>
+                    <p>User id: ${transaction.user_id}</p>
+                    <p>Type: ${transaction.transaction_type}</p>
+                    <p>Amount: ${transaction.amount}</p>
+                    <p>Date: ${transaction.transaction_date}</p>
+                    <br>
+                `;
+                transactionsContainer.appendChild(transactionElement);
+            });
+
+        } catch (error) {
+            showMessage('Error fetching transactions');
+            console.error(error);
+        }
+    });
+
+    function showMessage(message) {
+        const messageElement = document.createElement('div');
+        messageElement.textContent = message;
+        messageElement.style.position = 'fixed';
+        messageElement.style.top = '20px';
+        messageElement.style.left = '50%';
+        messageElement.style.transform = 'translateX(-50%)';
+        messageElement.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        messageElement.style.color = 'white';
+        messageElement.style.padding = '10px 20px';
+        messageElement.style.borderRadius = '5px';
+        messageElement.style.zIndex = '1000';
+        document.body.appendChild(messageElement);
+
+        setTimeout(() => {
+            messageElement.style.transition = 'opacity 1s';
+            messageElement.style.opacity = '0';
+        }, 2000);
+
+        setTimeout(() => {
+            document.body.removeChild(messageElement);
+        }, 3000);
+    }
+
+    payoutButton.addEventListener('click', async function () {
+        const url = `/request/${1}/${10}/`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+
+        });
+
+        if (response.ok) {
+            const payoutData = await response.json();
+            showMessage('Payout request successful');
+
+        } else {
+            showMessage('Payout request failed');
+        }
+     });
+});
+</script>
 </body>
 </html>

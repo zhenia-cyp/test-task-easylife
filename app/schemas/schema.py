@@ -3,6 +3,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from decimal import Decimal
 from datetime import datetime
 from pydantic_core.core_schema import ValidationInfo
+from typing import Optional
 
 
 class ReferralCreate(BaseModel):
@@ -38,9 +39,11 @@ class TransactionCreate(BaseModel):
 
 class TransactionResponse(BaseModel):
     id: int
+    user_id: int
     transaction_type: str
     amount: Decimal
-    transaction_date: str
+    transaction_date: str | datetime
+
 
     model_config = ConfigDict(from_attributes=True,
                               arbitrary_types_allowed=True)
@@ -99,5 +102,11 @@ class UserSignInRequest(BaseModel):
 
 class DeleteResponse(BaseModel):
     delete: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BalanceResponse(BaseModel):
+    balance: Decimal
 
     model_config = ConfigDict(from_attributes=True)
