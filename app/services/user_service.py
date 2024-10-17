@@ -4,7 +4,7 @@ from app.models.model import User, Transaction, Referral
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
 from app.schemas.schema import UserCreate, UserResponse, TransactionResponse, ReferralResponse, \
-    GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema
+    GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema, GetAllNonReferralsResponse
 from sqlalchemy import select
 from app.utils.crud_repository import CrudRepository
 from app.utils.exceptions import GenerateReferralCodeException
@@ -103,11 +103,9 @@ class UserService:
         referral_crud_repository = CrudRepository(self.session, Referral)
         user_crud_repository = CrudRepository(self.session, User)
         user_referer = await user_crud_repository.get_one_by(referral_code=code)
-        print('user_referer:', user_referer)
         if user_referer is None:
             return None
         existing_user = await user_crud_repository.get_one_by(username=referral.username)
-        print('existing_user:', existing_user)
         if existing_user:
             has_referer = await referral_crud_repository.get_one_by(referred_id=existing_user.id)
             print('has_referer: ',has_referer )
@@ -143,7 +141,7 @@ class UserService:
         return GetAllReferralsResponse.model_validate(data)
 
 
-    async def get_non_referrals(self, user_id: int) -> GetAllReferralsResponse | None:
+    async def get_non_referrals(self, user_id: int) -> GetAllNonReferralsResponse | None:
         """returns a list of users who are not referred by the current user and not referred by anyone else."""
         user_crud_repository = CrudRepository(self.session, User)
         current_user = await user_crud_repository.get_one_by(id=user_id)
@@ -164,13 +162,13 @@ class UserService:
             "non_referrals": []
         }
 
-        for user in referrals.scalars():
+        for user in referrals.fetchall():
             data["non_referrals"].append({
                 "user_id": user.id,
                 "username": user.username
             })
 
-        return GetAllReferralsResponse.model_validate(data)
+        return GetAllNonReferralsResponse.model_validate(data)
 
 
     async def get_user_profile(self, user_id:int) -> UserProfileResponse:

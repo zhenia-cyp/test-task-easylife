@@ -69,6 +69,16 @@ class GetAllReferralsResponse(BaseModel):
     username: str
     referrals: List[UsernameResponse]
 
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GetAllNonReferralsResponse(BaseModel):
+    user_id: int
+    username: str
+    non_referrals: List[UsernameResponse]
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class UserProfileResponse(BaseModel):
     id: int

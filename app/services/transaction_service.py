@@ -187,23 +187,21 @@ class TransactionService:
             self, user_id: int, start_date: str | None, end_date: str | None) -> List[dict]:
         """This method returns payout transactions filtered by date range for a specific user"""
 
-        start_date_obj = datetime.strptime(start_date, "%d-%m-%Y") if start_date else None
-        end_date_obj = datetime.strptime(end_date, "%d-%m-%Y") if end_date else None
-
-
+        start_date= datetime.strptime(start_date, "%d-%m-%Y") if start_date else None
+        end_date = datetime.strptime(end_date, "%d-%m-%Y") if end_date else None
         stmt = select(Transaction).where(
             Transaction.user_id == user_id,
             Transaction.transaction_type == 'request_payout'
         )
 
-        if start_date_obj:
-            stmt = stmt.where(Transaction.transaction_date >= start_date_obj)
-        if end_date_obj:
-            stmt = stmt.where(Transaction.transaction_date <= end_date_obj)
+        if start_date:
+            stmt = stmt.where(Transaction.transaction_date >= start_date)
+        if end_date:
+            stmt = stmt.where(Transaction.transaction_date <= end_date)
 
         result = await self.session.execute(stmt)
         transactions = result.scalars().all()
-
+        transactions = await replace_date_format(transactions)
 
         return [
             {
@@ -211,7 +209,7 @@ class TransactionService:
                 "user_id": t.user_id,
                 "transaction_type": t.transaction_type,
                 "amount": str(t.amount),
-                "transaction_date": t.transaction_date.isoformat()
+                "transaction_date": t.transaction_date
             }
             for t in transactions
         ] if transactions else []

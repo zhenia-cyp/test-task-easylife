@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_async_session
-from app.models.model import User, Wallet, Transaction
+from app.models.model import User, Wallet
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
 from app.schemas.schema import UserResponse, UserCreate, TransactionResponse, ReferralResponse, \
-    GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema, UserSignInRequest, DeleteResponse
+    GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema, UserSignInRequest, DeleteResponse, \
+    GetAllNonReferralsResponse
 from app.services.authentication import AuthService
-from app.services.transaction_service import TransactionService
 from app.services.user_service import UserService
 from fastapi import HTTPException, Request
 from app.utils.crud_repository import CrudRepository
@@ -117,7 +117,7 @@ async def get_referrals(user_id: int, session: AsyncSession = Depends(get_async_
     return referrals
 
 
-@router_user.get("/get/all/not/refferals/{user_id}/", response_model=UserProfileResponse, summary="list of users who are not referred by the current user")
+@router_user.get("/get/all/not/refferals/{user_id}/", response_model=GetAllNonReferralsResponse, summary="list of users who are not referral the current user")
 async def get_not_referral_users(user_id: int, session: AsyncSession = Depends(get_async_session)):
     user_service = UserService(session)
     user = await user_service.get_non_referrals(user_id)

@@ -8,18 +8,31 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='css/style.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 </head>
 <body>
 
 <div class="container">
     <div class="request-panel">
-        <h2>Payout Requests</h2>
         <div class="request-item">
-            <span>Payout No. 31</span>
-            <span class="author">{{name.username}}</span>
-<!--            <button class="payout" data-user-id="{{name.id}}" data-payout="100">payout</button>-->
+            <span class="author">
+                <p><span>name: </span>{{ name.username }}</p>
+                <p><span>email:</span> {{ name.email }} </p>
+                <p><span>for referrals:</span> {{ name.referral_code }}</p>
+
+            </span>
+            <button class="my-referrals-link">my referrals</button>
+            <button class="not-yet-referrals-link">not yet referrals</button>
+            <button class="logout-link">log out</button>
+
         </div>
         <div class="transactions">
+        </div>
+
+        <div class="pagination" style="display: none;">
+            <button class="prev-page">prev</button>
+            <span class="page-info"></span>
+            <button class="next-page">next</button>
         </div>
     </div>
 
@@ -54,42 +67,104 @@
 </div>
 
 <script>
-    flatpickr("#startDate", {
-        dateFormat: "d-m-Y"
-    });
-
-    flatpickr("#endDate", {
-        dateFormat: "d-m-Y"
-    });
+    flatpickr("#startDate", { dateFormat: "d-m-Y" });
+    flatpickr("#endDate", { dateFormat: "d-m-Y" });
 
     document.addEventListener('DOMContentLoaded', function () {
     const filterBtn = document.querySelector('.btn-stats');
-    const payoutButton = document.querySelector('.payout');
-    const startDateInput = document.querySelector('#startDate');
-    const endDateInput = document.querySelector('#endDate');
     const transactionsContainer = document.querySelector('.transactions');
+    const paginationContainer = document.querySelector('.pagination');
+    const prevPageBtn = document.querySelector('.prev-page');
+    const nextPageBtn = document.querySelector('.next-page');
+    const pageInfo = document.querySelector('.page-info');
+    const header = document.querySelector('.stats-header');
 
+    const referralsBtn = document.querySelector('.my-referrals-link');
+    const notReferralsBtn = document.querySelector('.not-yet-referrals-link');
+    const logoutBtn = document.querySelector('.logout-link');
+
+    let currentPage = 1;
+    const itemsPerPage = 4;
+    let totalTransactions = [];
+
+    referralsBtn.addEventListener('click', async function () {
+        const userId = "{{name.id}}";
+        const referralsUrl = `/get/all/referrals/${userId}/`;
+
+        try {
+            const response = await fetch(referralsUrl, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+            const referralsData = response.ok ? await response.json() : [];
+            console.log('**referralsData: ', referralsData);
+
+            if (referralsData.referrals && referralsData.referrals.length > 0) {
+                totalTransactions = referralsData.referrals;
+                currentPage = 1;
+                displayTransactions();
+                paginationContainer.style.display = 'flex';
+
+            }
+
+            else {
+                totalTransactions = [];
+                transactionsContainer.innerHTML = '';
+                paginationContainer.style.display = 'none';
+                showMessage('No referrals found');
+            }
+
+        } catch (error) {
+            showMessage('Error fetching referrals');
+            console.error(error);
+        }
+    });
+
+    notReferralsBtn.addEventListener('click', async function () {
+        const userId = "{{name.id}}";
+        const notReferralsUrl = `/get/all/not/refferals/${userId}/`;
+
+        try {
+            const response = await fetch(notReferralsUrl, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+            const notReferralsData = response.ok ? await response.json() : [];
+            console.log('* * notReferralsData: ', notReferralsData);
+
+            if (notReferralsData.non_referrals && notReferralsData.non_referrals.length > 0) {
+                totalTransactions = notReferralsData.non_referrals;
+                currentPage = 1;
+                displayTransactions();
+                paginationContainer.style.display = 'flex';
+
+            } else {
+                totalTransactions = [];
+                transactionsContainer.innerHTML = '';
+                paginationContainer.style.display = 'none';
+                showMessage('No non-referral users found');
+            }
+
+        } catch (error) {
+            showMessage('Error fetching non-referral users');
+            console.error(error);
+        }
+    });
 
     filterBtn.addEventListener('click', async function () {
-        const startDate = startDateInput.value;
-        const endDate = endDateInput.value;
-        const header = document.querySelector('.stats-header');
-        header.innerHTML = 'Statistics from ' + startDateInput.value;
+        const startDate = document.querySelector('#startDate').value;
+        const endDate = document.querySelector('#endDate').value;
+        const userId = "{{name.id}}";
+        const bonusUrl = `/filter/bonus/${userId}/${startDate}/${endDate}/`;
+        const payoutUrl = `/filter/payout/${userId}/${startDate}/${endDate}/`;
+        header.innerHTML = 'Statistics from ' + startDate;
 
         if (!startDate && !endDate) {
             showMessage('Please select both start date and end date');
             return;
-        } else if (!startDate) {
+        }
+        else if (!startDate) {
             showMessage('Please select start date');
             return;
-        } else if (!endDate) {
+        }
+        else if (!endDate) {
             showMessage('Please select end date');
             return;
         }
-
-        const userId = "{{name.id}}";
-        const bonusUrl = `/filter/bonus/${userId}/${startDate}/${endDate}/`;
-        const payoutUrl = `/filter/payout/${userId}/${startDate}/${endDate}/`;
 
         try {
             const [bonusResponse, payoutResponse] = await Promise.all([
@@ -100,38 +175,91 @@
             const bonusTransactions = bonusResponse.ok ? await bonusResponse.json() : [];
             const payoutTransactions = payoutResponse.ok ? await payoutResponse.json() : [];
 
-            transactionsContainer.innerHTML = '';
+            totalTransactions = [...payoutTransactions, ...bonusTransactions];
+            currentPage = 1;
 
-            // Отобразить транзакции request_payout поверх бонусных транзакций
-            payoutTransactions.forEach(transaction => {
-                const transactionElement = document.createElement('div');
-                transactionElement.innerHTML = `
-                    <p>Payout transaction:</p>
-                    <p>User id: ${transaction.user_id}</p>
-                    <p>Type: ${transaction.transaction_type}</p>
-                    <p>Amount: ${transaction.amount}</p>
-                    <p>Date: ${transaction.transaction_date}</p>
-                    <br>
-                `;
-                transactionsContainer.appendChild(transactionElement);
-            });
+            displayTransactions();
 
-            bonusTransactions.forEach(transaction => {
-                const transactionElement = document.createElement('div');
-                transactionElement.innerHTML = `
-                    <p>Bonus transaction:</p>
-                    <p>User id: ${transaction.user_id}</p>
-                    <p>Type: ${transaction.transaction_type}</p>
-                    <p>Amount: ${transaction.amount}</p>
-                    <p>Date: ${transaction.transaction_date}</p>
-                    <br>
-                `;
-                transactionsContainer.appendChild(transactionElement);
-            });
+            if (totalTransactions.length > 0) {
+                paginationContainer.style.display = 'flex';
+            } else {
+                paginationContainer.style.display = 'none';
+                showMessage('No transactions found for the selected period');
+            }
 
         } catch (error) {
             showMessage('Error fetching transactions');
             console.error(error);
+        }
+    });
+
+    function displayTransactions() {
+        transactionsContainer.innerHTML = '';
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const transactionsToShow = totalTransactions.slice(startIndex, endIndex);
+
+        transactionsToShow.forEach(transaction => {
+            const transactionElement = document.createElement('div');
+            const title = transaction.transaction_type
+                ? (transaction.transaction_type === "request_payout" ? "Request payout transaction:" : "Transaction from referral")
+                : "User Information";
+
+            transactionElement.innerHTML = `
+                <h3>${title}</h3>
+                <p>User id: ${transaction.user_id || transaction.id}</p>
+                <p>${transaction.transaction_type ? 'Type: ' + transaction.transaction_type : 'Username: ' + transaction.username}</p>
+                ${transaction.transaction_type ? `<p>Amount: ${transaction.amount} USD</p>` : ''}
+                ${transaction.transaction_type ? `<p>Date: ${transaction.transaction_date}</p>` : ''}
+                <br>
+            `;
+            transactionsContainer.appendChild(transactionElement);
+        });
+
+        updatePagination();
+    }
+
+    function updatePagination() {
+        const totalPages = Math.ceil(totalTransactions.length / itemsPerPage);
+        pageInfo.textContent = ` ${currentPage} of ${totalPages}`;
+        prevPageBtn.disabled = currentPage === 1;
+        nextPageBtn.disabled = currentPage === totalPages;
+
+        if (totalPages <= 1) {
+            paginationContainer.style.display = 'none';
+        } else {
+            paginationContainer.style.display = 'flex';
+        }
+    }
+
+    prevPageBtn.addEventListener('click', function () {
+        if (currentPage > 1) {
+            currentPage--;
+            displayTransactions();
+        }
+    });
+
+    nextPageBtn.addEventListener('click', function () {
+        const totalPages = Math.ceil(totalTransactions.length / itemsPerPage);
+        if (currentPage < totalPages) {
+            currentPage++;
+            displayTransactions();
+        }
+    });
+
+    logoutBtn.addEventListener('click', async function (e) {
+        e.preventDefault();
+        const response = await fetch('/logout/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+            showMessage('Successfully logged out');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+        } else {
+            showMessage('Logout failed');
         }
     });
 
@@ -158,25 +286,6 @@
             document.body.removeChild(messageElement);
         }, 3000);
     }
-
-    payoutButton.addEventListener('click', async function () {
-        const url = `/request/${1}/${10}/`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-
-        });
-
-        if (response.ok) {
-            const payoutData = await response.json();
-            showMessage('Payout request successful');
-
-        } else {
-            showMessage('Payout request failed');
-        }
-     });
 });
 </script>
 </body>
