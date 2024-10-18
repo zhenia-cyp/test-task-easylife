@@ -43,7 +43,8 @@ async def test_get_user(user_service):
 @pytest.mark.asyncio
 async def test_get_all_users(user_service):
     mock_user = User(id=1, username="user1")
-    mock_transactions_user = Transaction(id=1, user_id=1, transaction_type="credit", amount=100.0, transaction_date="2024-01-01")
+    mock_transactions_user = Transaction(id=1, user_id=1,
+    transaction_type="credit", amount=100.0, transaction_date="2024-01-01")
 
     user_transactions_response = [
         UserTransactionsResponse(
@@ -52,6 +53,7 @@ async def test_get_all_users(user_service):
             transactions=[
                 {
                     "id": mock_transactions_user.id,
+                    "user_id": mock_transactions_user.user_id,
                     "transaction_type": mock_transactions_user.transaction_type,
                     "amount": mock_transactions_user.amount,
                     "transaction_date": mock_transactions_user.transaction_date
@@ -80,3 +82,4 @@ async def test_get_all_users(user_service):
     assert len(result.result[0].transactions) == 1
     assert result.result[0].transactions[0].transaction_type == "credit"
     assert result.result[0].transactions[0].amount == 100.0
+    assert result.result[0].transactions[0].user_id == mock_transactions_user.user_id

@@ -24,6 +24,7 @@ async def test_create_transaction(transaction_service):
 
     transaction_service.create_transaction = AsyncMock(return_value=TransactionResponse(
         id=mock_transaction.id,
+        user_id=mock_transaction.user_id,
         transaction_type=mock_transaction.transaction_type,
         amount=mock_transaction.amount,
         transaction_date=mock_transaction.transaction_date

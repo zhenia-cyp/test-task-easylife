@@ -10,7 +10,6 @@ from app.utils.crud_repository import CrudRepository
 from app.utils.utils import replace_date_format
 
 
-
 class TransactionService:
     """service class responsible for managing transactions"""
     MINIMUM_TRANSACTION_AMOUNT = 10.00

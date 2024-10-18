@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
 from app.db.database import get_async_session
 from app.models.model import User, Wallet
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
@@ -64,7 +66,7 @@ async def login(response: Response, user: UserSignInRequest,
               detail="Token not found"
           )
     response.set_cookie(
-        key="you_kent_find_it",
+        key=settings.TOKEN_KEY,
         value=f"Bearer {token}",
         httponly=True,
         max_age=60 * 60 * 25,
@@ -77,7 +79,7 @@ async def login(response: Response, user: UserSignInRequest,
 @router_user.post("/logout/")
 async def logout_user(response: Response):
     """logs out the user by deleting the authentication cookie"""
-    response.delete_cookie(key="you_kent_find_it")
+    response.delete_cookie(key=settings.TOKEN_KEY)
     return {"message": "Successfully logged out"}
 
 

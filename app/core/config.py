@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     ALGORITHM: str
     JWT_SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
+    TOKEN_KEY: str
 
 
     @property
