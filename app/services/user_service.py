@@ -1,19 +1,25 @@
 import uuid
+from typing import Type
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
 from pydantic import BaseModel
 from app.models.model import User, Transaction, Referral
-from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.pagination import PageParams, PaginationResponse, PaginationListResponse
-from app.schemas.schema import UserCreate, UserResponse, TransactionResponse, ReferralResponse, \
-    GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema, GetAllNonReferralsResponse
-from sqlalchemy import select
+from app.schemas.schema import (
+    UserCreate, UserResponse, TransactionResponse, ReferralResponse,
+    GetAllReferralsResponse, UserProfileResponse, RegisterUserSchema,
+    GetAllNonReferralsResponse
+)
 from app.utils.crud_repository import CrudRepository
 from app.utils.exceptions import GenerateReferralCodeException
 from app.utils.pagination import Pagination
 from app.utils.utils import replace_date_format, get_hash_password
-from typing import Type, List
 
 
 class UserService:
+    """service class responsible for managing user-related operations"""
     def __init__(self, session: AsyncSession, schema: Type[BaseModel] = None):
         self.session = session
         self.schema = schema
@@ -52,7 +58,8 @@ class UserService:
         return UserResponse.model_validate(new_user)
 
 
-    async def get_user(self, user_id: int, page_params: PageParams) -> PaginationResponse[TransactionResponse] | None:
+    async def get_user(self, user_id: int,
+        page_params: PageParams) -> PaginationResponse[TransactionResponse] | None:
         """the method returns all transactions for a specific user by id"""
         user_crud_repository = CrudRepository(self.session, User)
         current_user = await user_crud_repository.get_one_by(id=user_id)
@@ -98,7 +105,8 @@ class UserService:
         return PaginationListResponse.model_validate(users)
 
 
-    async def create_referral_by_code(self, code: str, referral: UserCreate ) -> ReferralResponse | None| bool | str:
+    async def create_referral_by_code(self,
+        code: str, referral: UserCreate ) -> ReferralResponse | None| bool | str:
         """this method returns a referral by a referral code"""
         referral_crud_repository = CrudRepository(self.session, Referral)
         user_crud_repository = CrudRepository(self.session, User)
@@ -118,7 +126,8 @@ class UserService:
 
 
     async def get_my_referrals(self, user_id: int) -> GetAllReferralsResponse | None:
-        """method returns the current user's information with a list of their referred users"""
+        """this method returns the current user's information with
+           a list of their referred users"""
         user_crud_repository = CrudRepository(self.session, User)
         current_user = await user_crud_repository.get_one_by(id=user_id)
         if not current_user:
@@ -142,7 +151,8 @@ class UserService:
 
 
     async def get_non_referrals(self, user_id: int) -> GetAllNonReferralsResponse | None:
-        """returns a list of users who are not referred by the current user and not referred by anyone else."""
+        """this method returns a list of users who are not referred by the
+           current user and not referred by anyone else."""
         user_crud_repository = CrudRepository(self.session, User)
         current_user = await user_crud_repository.get_one_by(id=user_id)
         if not current_user:
@@ -180,20 +190,13 @@ class UserService:
 
 
     async def delete_referral(self, referrer_id: int, referred_id: int) -> bool:
-        """This method deletes a referral linked to the current user"""
+        """this method deletes a referral linked to the current user"""
         refferal_crud_repository = CrudRepository(self.session, Referral)
-        my_referral = await refferal_crud_repository.get_one_by(referrer_id=referrer_id, referred_id=referred_id)
+        my_referral = await refferal_crud_repository.get_one_by(
+            referrer_id=referrer_id,
+            referred_id=referred_id
+        )
         if not my_referral:
             return False
         result = await refferal_crud_repository.delete_one(my_referral)
         return result
-
-
-
-
-
-
-
-
-
-

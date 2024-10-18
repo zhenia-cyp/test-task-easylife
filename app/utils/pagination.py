@@ -1,13 +1,13 @@
 from math import ceil
-from typing import Optional, List, TypeVar
-from app.schemas.pagination import PageParams, PaginationListResponse
+from typing import Optional, List, TypeVar, Type
 from pydantic import BaseModel
-from typing import Type
+from app.schemas.pagination import PageParams
 
 T = TypeVar('T')
 
 
 class Pagination:
+    """a class for paginating data based on page parameters"""
     def __init__(self, page_params: PageParams, items: Optional[List[T]], schema: Type[BaseModel]):
 
         self.page_params = page_params
@@ -19,6 +19,8 @@ class Pagination:
 
 
     async def get_pagination(self):
+        """get the paginated response based on the provided
+        items and page parameters"""
         items = self.items[self.offset:self.offset + self.limit]
         if not items:
             return self.empty_response()
@@ -37,6 +39,7 @@ class Pagination:
 
 
     def empty_response(self):
+        """returns an empty paginated response when no items are available"""
         data = {
             "current_page": 0,
             "size": 0,

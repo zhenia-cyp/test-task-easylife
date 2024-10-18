@@ -5,12 +5,12 @@ from sqlalchemy.orm import validates
 from pytz import timezone
 
 
-
 Base = declarative_base()
 metadata = MetaData()
 
 
 class User(Base):
+    """represents a user in the system with authentication details"""
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
@@ -37,6 +37,7 @@ class User(Base):
 
 
 class Transaction(Base):
+    """represents a financial transaction performed by a user"""
     __tablename__ = "transactions"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -73,6 +74,7 @@ class Transaction(Base):
 
 
 class Referral(Base):
+    """represents a referral relationship between two users"""
     __tablename__ = "referrals"
     id = Column(Integer, primary_key=True, index=True)
     referrer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -90,6 +92,7 @@ class Referral(Base):
 
 
 class Wallet(Base):
+    """represents a wallet with balance and purchase information for a user"""
     __tablename__ = 'wallet'
 
     id = Column(Integer, primary_key=True, index=True)

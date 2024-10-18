@@ -2,7 +2,9 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    
+    """
+    This class defines the application settings
+    and loads them from the environment"""
     HOST: str = "localhost"
     PORT: int = 8000
     DEBUG: bool = True
@@ -21,10 +23,16 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        """returns the database connection URL using the defined postgresql settings"""
+        return "postgresql+asyncpg://" \
+               f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@" \
+               f"{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/" \
+               f"{self.POSTGRES_DB}"
 
 
     class Config:
+        """this class defines environment file settings"""
+        # pylint: disable=R0903
         env_file = ".env"
         env_file_encoding = "utf-8"
 

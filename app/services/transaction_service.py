@@ -1,19 +1,18 @@
-from typing import List
-
-from app.models.model import Transaction, Referral, Wallet, User
-from app.schemas.schema import TransactionCreate, TransactionResponse, BalanceResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timedelta
-
-from app.services.user_service import UserService
-from app.utils.crud_repository import CrudRepository
-from sqlalchemy import select
 import decimal
+import logging
+from datetime import datetime, timedelta
+from typing import List
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.models.model import Transaction, Referral, Wallet
+from app.schemas.schema import TransactionCreate, TransactionResponse, BalanceResponse
+from app.utils.crud_repository import CrudRepository
 from app.utils.utils import replace_date_format
 
 
 
 class TransactionService:
+    """service class responsible for managing transactions"""
     MINIMUM_TRANSACTION_AMOUNT = 10.00
     FIRST_LINE_BONUS_RATE = 0.10
     SECOND_LINE_BONUS_RATE = 0.05
@@ -21,9 +20,11 @@ class TransactionService:
 
     def __init__(self, session: AsyncSession):
         self.session = session
+        self.logger = logging.getLogger(__name__)
 
 
-    async def create_transaction(self, transaction: TransactionCreate) -> TransactionResponse | bool:
+    async def create_transaction(self, transaction:
+        TransactionCreate) -> TransactionResponse | bool:
         """method returns a new transaction, user can create another,
           identical transaction only after a minute."""
         crud_repository = CrudRepository(self.session, Transaction)
@@ -66,19 +67,32 @@ class TransactionService:
         if transaction.amount < self.MINIMUM_TRANSACTION_AMOUNT:
             return
         referral_crud_repository = CrudRepository(self.session, Referral)
-        referral_first_line = await referral_crud_repository.get_one_by(referred_id=transaction.user_id)
+        referral_first_line = await referral_crud_repository.get_one_by(
+            referred_id=transaction.user_id)
         if referral_first_line:
             referrer_id_first_line = referral_first_line.referrer_id
             bonus_amount_first_line = transaction.amount * self.FIRST_LINE_BONUS_RATE  # 10%
-            await self.update_wallet_balance(referrer_id_first_line, bonus_amount_first_line, line="first")
-            print(f'Bonus {bonus_amount_first_line} first line (user_id: {referrer_id_first_line})')
+            await self.update_wallet_balance(
+                referrer_id_first_line,
+                bonus_amount_first_line,
+                line="first"
+            )
+            self.logger.info('Bonus %.2f first line (user_id: %d)',
+                             bonus_amount_first_line, referrer_id_first_line)
 
-            referral_second_line = await referral_crud_repository.get_one_by(referred_id=referrer_id_first_line)
+            referral_second_line = await referral_crud_repository.get_one_by(
+             referred_id=referrer_id_first_line
+            )
             if referral_second_line:
                 referrer_id_second_line = referral_second_line.referrer_id
                 bonus_amount_second_line = transaction.amount * self.SECOND_LINE_BONUS_RATE  # 5%
-                await self.update_wallet_balance(referrer_id_second_line, bonus_amount_second_line, line="second")
-                print(f'Bonus {bonus_amount_second_line} second line (user_id: {referrer_id_second_line})')
+                await self.update_wallet_balance(
+                    referrer_id_second_line,
+                    bonus_amount_second_line,
+                    line="second"
+                )
+                self.logger.info('Bonus %.2f second line (user_id: %d)', bonus_amount_second_line,
+                                 referrer_id_second_line)
 
 
     async def update_wallet_balance(self, user_id: int, bonus_amount: float, line: str) -> None:
@@ -148,13 +162,16 @@ class TransactionService:
 
 
     async def filter_bonus_transactions_by_date(
-            self, user_id: int, start_date: str | None, end_date: str | None) ->  List[TransactionResponse]:
+            self, user_id: int, start_date: str | None,
+            end_date: str | None) ->  List[TransactionResponse]:
         """this method returns first and second-line referral transactions filtered by date"""
         referral_crud_repository = CrudRepository(self.session, Referral)
-        first_line_referrals = await referral_crud_repository.get_all_by(referrer_id=user_id)
+        first_line_referrals = await referral_crud_repository.get_all_by(
+            referrer_id=user_id)
         first_line_user_ids = [referral.referred_id for referral in first_line_referrals]
 
-        second_line_stmt = select(Referral.referred_id).where(Referral.referrer_id.in_(first_line_user_ids))
+        second_line_stmt = (select(Referral.referred_id)
+                            .where(Referral.referrer_id.in_(first_line_user_ids)))
         result = await self.session.execute(second_line_stmt)
         second_line_user_ids = [row[0] for row in result.all()]
 
@@ -176,6 +193,7 @@ class TransactionService:
 
 
     async def get_user_balance(self, user_id: int) -> BalanceResponse | None:
+        """this method returns user balance"""
         wallet_crud_repository = CrudRepository(self.session, Wallet)
         wallet = await wallet_crud_repository.get_one_by(user_id=user_id)
         if wallet is None:
