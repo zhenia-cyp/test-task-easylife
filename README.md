@@ -170,7 +170,7 @@ Creating transactions:
 
 <img src="https://github.com/zhenia-cyp/images-for-readme-files/blob/main/screenshots/screenshot%20trac%202.png"/>
 
-So, the referrals made purchases totaling 770 euros and 1000 euros. 
+So, the referrals made purchases totaling 770 usd and 1000 usd. 
 Let’s go to the admin panel and check the earnings.
 
 <img src="https://github.com/zhenia-cyp/images-for-readme-files/blob/main/screenshots/admin1.png"/>
