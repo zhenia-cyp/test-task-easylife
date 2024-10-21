@@ -1,6 +1,5 @@
 import uuid
 from typing import Type
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -54,7 +53,6 @@ class UserService:
         user_dict["referral_code"] = await self.generate_unique_referral_code()
         crud_repository = CrudRepository(self.session, User)
         new_user = await crud_repository.create_one(user_dict)
-        print('new_user: ', new_user)
         return UserResponse.model_validate(new_user)
 
 
@@ -106,14 +104,15 @@ class UserService:
 
 
     async def create_referral_by_code(self,
-        code: str, referral: UserCreate ) -> ReferralResponse | None| bool | str:
-        """this method returns a referral by a referral code"""
+        code: str, referral_id: int ) -> ReferralResponse | None| bool | str:
+        """this method returns a new referral """
         referral_crud_repository = CrudRepository(self.session, Referral)
         user_crud_repository = CrudRepository(self.session, User)
         user_referer = await user_crud_repository.get_one_by(referral_code=code)
         if user_referer is None:
             return None
-        existing_user = await user_crud_repository.get_one_by(username=referral.username)
+        existing_user = await user_crud_repository.get_one_by(id=referral_id)
+        print(' existing_user: ', existing_user)
         if existing_user:
             has_referer = await referral_crud_repository.get_one_by(referred_id=existing_user.id)
             print('has_referer: ',has_referer )

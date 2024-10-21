@@ -102,7 +102,7 @@ async def get_user(user_id: int,
 @router_user.get("/", summary="admin panel")
 async def home(request: Request, session: AsyncSession = Depends(get_async_session)):
     """renders the admin panel after verifying the user token and account status"""
-    token = request.cookies.get('you_kent_find_it')
+    token = request.cookies.get(settings.TOKEN_KEY)
     if not token:
         raise TokenNotFoundException()
     auth_service = AuthService(session)
@@ -128,12 +128,13 @@ async def get_all_users(session: AsyncSession = Depends(get_async_session),
     return users
 
 
-@router_user.post("/create/referral/by/{code}/", response_model=ReferralResponse)
-async def create_referral(code: str, referral: UserCreate,
+@router_user.post("/create/referral/by/{code}/{refferal_id}/", response_model=ReferralResponse)
+async def create_referral(code: str, referral_id: int,
                          session: AsyncSession = Depends(get_async_session)):
     """returns the referral user linked with their referrer"""
     user_service = UserService(session)
-    user = await user_service.create_referral_by_code(code, referral) # code - referer
+    user = await user_service.create_referral_by_code(code, referral_id)
+    print('referral', user)
     if not user:
         raise HTTPException(
             status_code=404,

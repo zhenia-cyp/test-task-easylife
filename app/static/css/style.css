@@ -51,7 +51,7 @@ body {
 
 .btn-view {
     padding: 8px 16px;
-    background-color: #007bff;
+    background-color: 0014a8;
     color: #fff;
     border: none;
     border-radius: 5px;
@@ -76,7 +76,7 @@ body {
 .btn-stats, .logout-link,
  .my-referrals-link, .not-yet-referrals-link {
     padding: 10px 10px;
-    background-color: #28a745;
+    background-color: #0014a8;
     color: #fff;
     border: none;
     border-radius: 5px;

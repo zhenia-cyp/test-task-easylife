@@ -87,3 +87,99 @@ alembic revision --autogenerate -m "first migration"
 ```bash
 alembic upgrade head
 ```
+
+## How to use
+
+To test the referral system, follow these steps:
+
+### User Registration
+
+Register three users.
+The first user (User 1) will make the second user (User 2) their referral, 
+and the second user (User 2) will make the third user (User 3) their referral.
+For the first user, the others will be referrals of the first and second line.
+
+The referrer will receive 10% of the amount specified in the transaction from 
+the first line, and 5% from the second line.
+
+### test data
+
+```
+ {
+  "username": "Artem",
+  "email": "artem@gmail.com",
+  "password": "artem123",
+  "password_check": "artem123"
+}
+```
+```
+User: id: 1, username: Artem, email: artem@gmail.com, referral_code: 6c317a9e-d
+```
+```
+{
+  "username": "Billy",
+  "email": "boris@gmail.com",
+  "password": "boris123",
+  "password_check": "boris123"
+}
+```
+```
+User: id: 2, username: Billy, email: boris@gmail.com,referral_code: 2957fd4b-1
+```
+```
+{
+  "username": "Vlad",
+  "email": "vlad@gmail.com",
+  "password": "vlad123",
+  "password_check": "vlad123"
+}
+
+```
+```
+ User: id: 3, username: Vlad, email: vlad@gmail.com,referral_code: ddbad83e-8
+```
+
+Each user gets a unique code when they register, which is used to connect the referrer and their referral.
+
+### Create the referral
+
+In the database, there is a table called Referral, which tracks the relationship between a user and their referral.
+
+referrer_id – the one who invites (referrer)
+referred_id – the one who was invited, i.e., the referral
+
+To create a new referral, we need the referrer's unique code. In our case, that's the unique code 6c317a9e-d for user Artem. 
+We also need the ID of the future user who will be the referral, which is Billy with ID: 2.
+
+<img src="https://github.com/zhenia-cyp/images-for-readme-files/blob/main/screenshots/screenshot%20endpoint1.png"/>
+<img src="https://github.com/zhenia-cyp/images-for-readme-files/blob/main/screenshots/screenshot%20response.png"/>
+
+So, we have created a first-level referral for the user with ID: 1.
+Now, to create a second-level referral, User ID 2 (Billy) needs to make User ID 3 (Vlad) their referral.
+
+<img src="https://github.com/zhenia-cyp/images-for-readme-files/blob/main/screenshots/endpoint2.png"/>
+<img src="https://github.com/zhenia-cyp/images-for-readme-files/blob/main/screenshots/response2.png"/>
+
+### Let’s get some bonuses!
+
+To receive commissions from first (10%) and second-level (5%) referrals, those users need to make purchases.
+
+Creating transactions:
+
+<img src="https://github.com/zhenia-cyp/images-for-readme-files/blob/main/screenshots/screenshot%20transac%201.png"/>
+
+<img src="https://github.com/zhenia-cyp/images-for-readme-files/blob/main/screenshots/screenshot%20trac%202.png"/>
+
+So, the referrals made purchases totaling 770 euros and 1000 euros. 
+Let’s go to the admin panel and check the earnings.
+
+<img src="https://github.com/zhenia-cyp/images-for-readme-files/blob/main/screenshots/admin1.png"/>
+
+
+
+
+
+
+
+
+
