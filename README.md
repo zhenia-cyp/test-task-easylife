@@ -145,8 +145,8 @@ Each user gets a unique code when they register, which is used to connect the re
 
 In the database, there is a table called Referral, which tracks the relationship between a user and their referral.
 
-referrer_id – the one who invites (referrer)
-referred_id – the one who was invited, i.e., the referral
+referrer_id – the one who invites.
+referred_id – the one who was invited, i.e., the referral.
 
 To create a new referral, we need the referrer's unique code. In our case, that's the unique code 6c317a9e-d for user Artem. 
 We also need the ID of the future user who will be the referral, which is Billy with ID: 2.
@@ -174,6 +174,9 @@ So, the referrals made purchases totaling 770 usd and 1000 usd.
 Let’s go to the admin panel and check the earnings.
 
 <img src="https://github.com/zhenia-cyp/images-for-readme-files/blob/main/screenshots/admin1.png"/>
+
+I have also implemented the ability to withdraw funds from the user’s balance, filter transactions by date, 
+view a list of your referrals, and see those who haven’t joined yet.
 
 
 
